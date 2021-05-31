@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+export WD=$PWD
+
+if [ ! -d "$WD/bin" ]; then
+    mkdir "$WD/bin"
+fi
+
+export flags=(
+    "-ferror-limit=1"
+    "-fno-exceptions"
+    "-fno-math-errno"
+    "-fno-rtti"
+    "-fno-unwind-tables"
+    "-fshort-enums"
+    "-march=native"
+    "-O1"
+    "-std=c++11"
+    "-Werror"
+    "-Weverything"
+    "-Wno-c++98-compat"
+    "-Wno-extra-semi-stmt"
+    "-Wno-padded"
+    "-Wno-unused-function"
+)
+
+runc () {
+    handle=$(echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/')
+    clang-format -i -verbose "$1" || return
+    pwd_=$PWD
+    clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
+    "$WD/bin/${handle}"
+}
+
+export -f runc
