@@ -11,7 +11,8 @@ static void show(u8 x) {
     printf("%hhu", x);
 }
 
-template <typename T, usize N> static void show(T array[N]) {
+template <typename T, usize N>
+static void show(T array[N]) {
     printf("[ ");
     for (usize i = 0; i < N; ++i) {
         show(array[i]);

@@ -5,7 +5,8 @@
 typedef uint32_t u32;
 typedef int32_t  i32;
 
-template <typename T> struct Node {
+template <typename T>
+struct Node {
     Node<T>* next;
     T        item;
 };
@@ -18,7 +19,8 @@ template <typename T> struct Node {
 SHOW(u32, "u32: %u")
 SHOW(i32, "i32: %d")
 
-template <typename T> static void print_nodes(const Node<T>* node) {
+template <typename T>
+static void print_nodes(const Node<T>* node) {
     while (node) {
         printf("{ ");
         show(node->item);
