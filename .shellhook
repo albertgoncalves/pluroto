@@ -13,6 +13,7 @@ export flags=(
     "-fno-rtti"
     "-fno-unwind-tables"
     "-fshort-enums"
+    "-fuse-ld=lld"
     "-march=native"
     "-O1"
     "-std=c++11"
