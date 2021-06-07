@@ -1,7 +1,7 @@
 with import <nixpkgs> {};
 mkShell.override { stdenv = llvmPackages_12.stdenv; } {
     buildInputs = [
-        lld_12
+        llvmPackages_12.lld
         shellcheck
         valgrind
     ];
