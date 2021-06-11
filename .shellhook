@@ -20,9 +20,11 @@ export flags=(
     "-Werror"
     "-Weverything"
     "-Wno-c++98-compat"
+    "-Wno-c99-extensions"
     "-Wno-extra-semi-stmt"
     "-Wno-padded"
     "-Wno-unused-function"
+    "-Wno-unused-template"
 )
 
 runc () {
