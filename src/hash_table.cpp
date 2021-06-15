@@ -178,6 +178,7 @@ i32 main() {
            sizeof(Table<String, i32>));
     Table<String, i32>* table = reinterpret_cast<Table<String, i32>*>(
         calloc(1, sizeof(Table<String, i32>)));
+    EXIT_IF(!table);
     insert(table, TO_STR("abd"), 2);
     insert(table, TO_STR("__?__"), 99);
     insert(table, TO_STR("001442"), 7);
