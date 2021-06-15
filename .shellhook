@@ -20,10 +20,13 @@ export flags=(
     "-Werror"
     "-Weverything"
     "-Wno-c++98-compat"
+    "-Wno-c++98-compat-pedantic"
     "-Wno-c99-extensions"
+    "-Wno-covered-switch-default"
     "-Wno-extra-semi-stmt"
     "-Wno-padded"
     "-Wno-unused-function"
+    "-Wno-unused-macros"
     "-Wno-unused-template"
 )
 
