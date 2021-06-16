@@ -13,11 +13,17 @@ typedef int32_t i32;
 #define null nullptr
 
 #define CAP_NODES (1 << 5)
-#define CAP_ARGS  (1 << 5)
+#define CAP_LISTS (1 << 5)
 
 struct String {
     const char* buffer;
     u32         len;
+};
+
+template <typename T>
+struct List {
+    T*    item;
+    List* next;
 };
 
 enum TokenTag {
@@ -61,15 +67,10 @@ enum Op {
 
 struct Node;
 
-struct Args {
-    Node* node;
-    Args* next;
-    Args* last;
-};
-
 struct Call {
-    Node* node;
-    Args* args;
+    Node*       node;
+    List<Node>* first;
+    List<Node>* last;
 };
 
 struct UnOp {
@@ -96,11 +97,11 @@ struct Node {
 };
 
 struct Memory {
-    Node nodes[CAP_NODES];
-    u32  len_nodes;
-    Args args[CAP_ARGS];
-    u32  len_args;
-    u32  cur_tokens;
+    Node       nodes[CAP_NODES];
+    u32        len_nodes;
+    List<Node> lists[CAP_LISTS];
+    u32        len_lists;
+    u32        cur_tokens;
 };
 
 #define TO_STR(literal)      \
@@ -226,9 +227,9 @@ static Node* alloc_node(Memory* memory) {
     return &memory->nodes[memory->len_nodes++];
 }
 
-static Args* alloc_args(Memory* memory) {
-    EXIT_IF(CAP_ARGS <= memory->len_args);
-    return &memory->args[memory->len_args++];
+static List<Node>* alloc_list(Memory* memory) {
+    EXIT_IF(CAP_LISTS <= memory->len_lists);
+    return &memory->lists[memory->len_lists++];
 }
 
 #define TOKENS_EMPTY(memory) (COUNT_TOKENS <= memory->cur_tokens)
@@ -363,9 +364,8 @@ static Node* parse(Memory* memory, u8 prev_binding) {
             pop_token(memory);
             Node* call_node = alloc_node(memory);
             call_node->body.as_call.node = left_node;
-            call_node->body.as_call.args = alloc_args(memory);
-            call_node->body.as_call.args->next = null;
-            call_node->body.as_call.args->last = null;
+            call_node->body.as_call.first = null;
+            call_node->body.as_call.last = null;
             call_node->tag = NODE_CALL;
             token = peek_token(memory);
             EXIT_IF(!token);
@@ -374,17 +374,14 @@ static Node* parse(Memory* memory, u8 prev_binding) {
                 return call_node;
             }
             for (;;) {
-                Args* args = alloc_args(memory);
-                Node* arg_node = parse(memory, 0);
-                if (!call_node->body.as_call.args->last) {
-                    call_node->body.as_call.args->node = arg_node;
-                    call_node->body.as_call.args->next = args;
-                    call_node->body.as_call.args->last = args;
+                List<Node>* arg = alloc_list(memory);
+                arg->item = parse(memory, 0);
+                if (!call_node->body.as_call.first) {
+                    call_node->body.as_call.first = arg;
+                    call_node->body.as_call.last = arg;
                 } else {
-                    call_node->body.as_call.args->last->node = arg_node;
-                    call_node->body.as_call.args->last->next = args;
-                    call_node->body.as_call.args->last->last = args;
-                    call_node->body.as_call.args->last = args;
+                    call_node->body.as_call.last->next = arg;
+                    call_node->body.as_call.last = arg;
                 }
                 token = pop_token(memory);
                 EXIT_IF(!token);
@@ -462,16 +459,12 @@ static void println(const Node* node, u8 n) {
     case NODE_CALL: {
         printf("( ");
         println(node->body.as_call.node, m);
-        EXIT_IF(!node->body.as_call.args);
-        Args args = *node->body.as_call.args;
-        for (;;) {
-            if (!args.next) {
-                break;
-            }
+        List<Node>* arg = node->body.as_call.first;
+        while (arg) {
             printf("\n");
             INDENT(m);
-            println(args.node, m);
-            args = *args.next;
+            println(arg->item, m);
+            arg = arg->next;
         }
         printf(")");
         break;
@@ -508,22 +501,22 @@ static void println(const Node* node, u8 n) {
 
 static void reset(Memory* memory) {
     memory->len_nodes = 0;
-    memory->len_args = 0;
+    memory->len_lists = 0;
     memory->cur_tokens = 0;
 }
 
 i32 main() {
     printf("\n"
-           "sizeof(String)   : %zu\n"
-           "sizeof(Token)    : %zu\n"
-           "sizeof(Args)     : %zu\n"
-           "sizeof(NodeBody) : %zu\n"
-           "sizeof(Node)     : %zu\n"
-           "sizeof(Memory)   : %zu\n"
+           "sizeof(String)     : %zu\n"
+           "sizeof(Token)      : %zu\n"
+           "sizeof(List<Node>) : %zu\n"
+           "sizeof(NodeBody)   : %zu\n"
+           "sizeof(Node)       : %zu\n"
+           "sizeof(Memory)     : %zu\n"
            "\n",
            sizeof(String),
            sizeof(Token),
-           sizeof(Args),
+           sizeof(List<Node>),
            sizeof(NodeBody),
            sizeof(Node),
            sizeof(Memory));
