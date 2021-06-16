@@ -376,7 +376,7 @@ static Node* parse(Memory* memory, u8 prev_binding) {
             for (;;) {
                 List<Node>* arg = alloc_list(memory);
                 arg->item = parse(memory, 0);
-                if (!call_node->body.as_call.first) {
+                if (!call_node->body.as_call.last) {
                     call_node->body.as_call.first = arg;
                     call_node->body.as_call.last = arg;
                 } else {
