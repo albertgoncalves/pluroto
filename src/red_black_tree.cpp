@@ -84,22 +84,7 @@ bool find(Node<K, V>* node, Node<K, V>* pointer) {
 }
 
 template <typename K, typename V>
-static void collect(Memory<K, V>* memory) {
-    memory->len_slots = 0;
-    for (u32 i = 0; i < CAP_NODES; ++i) {
-        Node<K, V>* pointer = &memory->nodes[i];
-        // NOTE: This is *not* efficient.
-        if (!find(memory->root, pointer)) {
-            memory->slots[memory->len_slots++] = pointer;
-        }
-    }
-}
-
-template <typename K, typename V>
 static Node<K, V>* alloc(Memory<K, V>* memory, K key, V value) {
-    if (memory->len_slots == 0) {
-        collect(memory);
-    }
     EXIT_IF(memory->len_slots == 0);
     Node<K, V>* node = memory->slots[--memory->len_slots];
     node->key = key;
@@ -230,17 +215,22 @@ static Node<K, V>* move_red_right(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-Node<K, V>* drop_min(Node<K, V>*);
+Node<K, V>* drop_min(Memory<K, V>*, Node<K, V>*);
 
 template <typename K, typename V>
-Node<K, V>* drop_min(Node<K, V>* node) {
-    if (!node || !node->left) {
+Node<K, V>* drop_min(Memory<K, V>* memory, Node<K, V>* node) {
+    if (!node) {
+        return null;
+    }
+    if (!node->left) {
+        EXIT_IF(CAP_NODES <= memory->len_slots);
+        memory->slots[memory->len_slots++] = node;
         return null;
     }
     if (!is_red(node->left) && !is_red(node->left->left)) {
         node = move_red_left(node);
     }
-    node->left = drop_min(node->left);
+    node->left = drop_min(memory, node->left);
     return balance(node);
 }
 
@@ -264,10 +254,10 @@ static Node<K, V>* find_min(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-Node<K, V>* drop(Node<K, V>*, K);
+Node<K, V>* drop(Memory<K, V>*, Node<K, V>*, K);
 
 template <typename K, typename V>
-Node<K, V>* drop(Node<K, V>* node, K key) {
+Node<K, V>* drop(Memory<K, V>* memory, Node<K, V>* node, K key) {
     if (!node) {
         return null;
     }
@@ -275,12 +265,14 @@ Node<K, V>* drop(Node<K, V>* node, K key) {
         if (node->left && !is_red(node->left) && !is_red(node->left->left)) {
             node = move_red_left(node);
         }
-        node->left = drop(node->left, key);
+        node->left = drop(memory, node->left, key);
     } else {
         if (is_red(node->left)) {
             node = rotate_right(node);
         }
         if ((key == node->key) && (!node->right)) {
+            EXIT_IF(CAP_NODES <= memory->len_slots);
+            memory->slots[memory->len_slots++] = node;
             return null;
         }
         if (node->right && !is_red(node->right) && !is_red(node->right->left))
@@ -291,9 +283,9 @@ Node<K, V>* drop(Node<K, V>* node, K key) {
             Node<K, V>* min_node = find_min(node->right);
             node->key = min_node->key;
             node->value = min_node->value;
-            node->right = drop_min(node->right);
+            node->right = drop_min(memory, node->right);
         } else {
-            node->right = drop(node->right, key);
+            node->right = drop(memory, node->right, key);
         }
     }
     return balance(node);
@@ -301,7 +293,7 @@ Node<K, V>* drop(Node<K, V>* node, K key) {
 
 template <typename K, typename V>
 static void drop(Memory<K, V>* memory, K key) {
-    memory->root = drop(memory->root, key);
+    memory->root = drop(memory, memory->root, key);
     if (memory->root) {
         memory->root->color = BLACK;
     }
@@ -364,6 +356,10 @@ i32 main() {
         drop<u8, char>(memory, 11);
         insert<u8, char>(memory, 11, 'A');
         insert<u8, char>(memory, 7, 'B');
+        drop<u8, char>(memory, 3);
+        drop<u8, char>(memory, 14);
+        insert<u8, char>(memory, 14, 'C');
+        insert<u8, char>(memory, 3, 'D');
         printf("\n");
         println(memory->root, 0);
         printf("\n");
