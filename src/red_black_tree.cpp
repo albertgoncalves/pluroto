@@ -4,6 +4,7 @@
 
 // NOTE: See `https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf`.
 // NOTE: See `https://algs4.cs.princeton.edu/33balanced/RedBlackBST.java.html`.
+// NOTE: See `http://www.mew.org/~kazu/proj/red-black-tree/`.
 
 #define CAP_NODES (1 << 4)
 
@@ -166,15 +167,26 @@ static bool is_red(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
+static Node<K, V>* balance(Node<K, V>* node) {
+    if (is_red(node->right) && !is_red(node->left)) {
+        node = rotate_left(node);
+    }
+    if (is_red(node->left) && is_red(node->left->left)) {
+        node = rotate_right(node);
+    }
+    if (is_red(node->left) && is_red(node->right)) {
+        flip(node);
+    }
+    return node;
+}
+
+template <typename K, typename V>
 Node<K, V>* insert(Memory<K, V>*, Node<K, V>*, K, V);
 
 template <typename K, typename V>
 Node<K, V>* insert(Memory<K, V>* memory, Node<K, V>* node, K key, V value) {
     if (!node) {
         return alloc(memory, key, value);
-    }
-    if (is_red(node->left) && is_red(node->right)) {
-        flip(node);
     }
     if (key == node->key) {
         node->value = value;
@@ -183,13 +195,7 @@ Node<K, V>* insert(Memory<K, V>* memory, Node<K, V>* node, K key, V value) {
     } else {
         node->right = insert(memory, node->right, key, value);
     }
-    if (is_red(node->right) && (!is_red(node->left))) {
-        node = rotate_left(node);
-    }
-    if (is_red(node->left) && is_red(node->left->left)) {
-        node = rotate_right(node);
-    }
-    return node;
+    return balance(node);
 }
 
 template <typename K, typename V>
@@ -224,28 +230,14 @@ static Node<K, V>* move_red_right(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-static Node<K, V>* balance(Node<K, V>* node) {
-    if (is_red(node->right) && (!is_red(node->left))) {
-        node = rotate_left(node);
-    }
-    if (is_red(node->left) && is_red(node->left->left)) {
-        node = rotate_right(node);
-    }
-    if (is_red(node->left) && is_red(node->right)) {
-        flip(node);
-    }
-    return node;
-}
-
-template <typename K, typename V>
 Node<K, V>* drop_min(Node<K, V>*);
 
 template <typename K, typename V>
 Node<K, V>* drop_min(Node<K, V>* node) {
-    if ((!node) || (!node->left)) {
+    if (!node || !node->left) {
         return null;
     }
-    if ((!is_red(node->left)) && (!is_red(node->left->left))) {
+    if (!is_red(node->left) && !is_red(node->left->left)) {
         node = move_red_left(node);
     }
     node->left = drop_min(node->left);
@@ -280,8 +272,7 @@ Node<K, V>* drop(Node<K, V>* node, K key) {
         return null;
     }
     if (key < node->key) {
-        if ((!is_red(node->left)) &&
-            (node->left && (!is_red(node->left->left)))) {
+        if (node->left && !is_red(node->left) && !is_red(node->left->left)) {
             node = move_red_left(node);
         }
         node->left = drop(node->left, key);
@@ -292,8 +283,8 @@ Node<K, V>* drop(Node<K, V>* node, K key) {
         if ((key == node->key) && (!node->right)) {
             return null;
         }
-        if ((!is_red(node->right)) &&
-            (node->right && (!is_red(node->right->left)))) {
+        if (node->right && !is_red(node->right) && !is_red(node->right->left))
+        {
             node = move_red_right(node);
         }
         if (key == node->key) {
@@ -367,6 +358,12 @@ i32 main() {
         drop<u8, char>(memory, 0);
         insert<u8, char>(memory, 14, '*');
         insert<u8, char>(memory, 0, 'a');
+        insert<u8, char>(memory, 1, '{');
+        insert<u8, char>(memory, 2, '}');
+        drop<u8, char>(memory, 7);
+        drop<u8, char>(memory, 11);
+        insert<u8, char>(memory, 11, 'A');
+        insert<u8, char>(memory, 7, 'B');
         printf("\n");
         println(memory->root, 0);
         printf("\n");
