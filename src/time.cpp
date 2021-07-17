@@ -19,14 +19,14 @@ i32 main() {
     Time*   time = localtime(&epoch);
     Memory* memory = reinterpret_cast<Memory*>(calloc(1, sizeof(Memory)));
     snprintf(memory->buffer,
-            CAP_CHARS,
-            "%4d-%02d-%02d %02d:%02d:%02d",
-            1900 + time->tm_year,
-            time->tm_mon,
-            time->tm_mday,
-            time->tm_hour,
-            time->tm_min,
-            time->tm_sec);
+             CAP_CHARS,
+             "%4d-%02d-%02d %02d:%02d:%02d",
+             1900 + time->tm_year,
+             time->tm_mon,
+             time->tm_mday,
+             time->tm_hour,
+             time->tm_min,
+             time->tm_sec);
     printf("%s\n", memory->buffer);
     free(memory);
     return EXIT_SUCCESS;
