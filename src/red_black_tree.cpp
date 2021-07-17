@@ -63,6 +63,7 @@ static void print(char x) {
 
 template <typename K, typename V>
 static void init(Memory<K, V>* memory) {
+    memory->root = null;
     memory->len_slots = 0;
     for (u32 i = 0; i < CAP_NODES; ++i) {
         memory->slots[memory->len_slots++] = &memory->nodes[i];
@@ -325,7 +326,7 @@ i32 main() {
     EXIT_IF(!memory);
     {
         init(memory);
-        for (u8 i = 0; i < CAP_NODES; ++i) {
+        for (u8 i = 0; i < 1; ++i) {
             insert<u8, char>(memory, i, 'a' + static_cast<char>(i));
         }
         for (u8 i = 0; i < 3; ++i) {
