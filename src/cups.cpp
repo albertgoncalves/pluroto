@@ -31,18 +31,15 @@ struct Memory {
 };
 
 const u64 ARRAY[] = {8, 7, 2, 4, 9, 5, 1, 3, 6};
+const u64 INDEX[] = {6, 2, 7, 3, 5, 8, 1, 0, 4};
 
 #define LEN (sizeof(ARRAY) / sizeof(ARRAY[0]))
 
-static u64 get_index(u64 x) {
-    if (x <= LEN) {
-        for (u64 i = 0; i < LEN; ++i) {
-            if (ARRAY[i] == x) {
-                return i;
-            }
-        }
+static u64 get_index(u64 i) {
+    if (i <= LEN) {
+        return INDEX[i - 1];
     }
-    return x - 1;
+    return i - 1;
 }
 
 static u64 get_dst(u64 x) {
@@ -68,23 +65,17 @@ static List* update(Memory* memory, List* l0) {
 i32 main() {
     Memory* memory = reinterpret_cast<Memory*>(calloc(1, sizeof(Memory)));
     EXIT_IF(!memory);
-    {
-        for (u64 i = 0; i < LEN; ++i) {
-            memory->lists[i] = {
-                ARRAY[i],
-                &memory->lists[(i + 1) % CAP],
-            };
-        }
-        for (u64 i = LEN; i < CAP; ++i) {
-            memory->lists[i] = {
-                i + 1,
-                &memory->lists[(i + 1) % CAP],
-            };
-        }
+    for (u64 i = 0; i < LEN; ++i) {
+        memory->lists[i] = {ARRAY[i], &memory->lists[(i + 1) % CAP]};
     }
-    List* list = &memory->lists[0];
-    for (u64 _ = 0; _ < 10000000; ++_) {
-        list = update(memory, list);
+    for (u64 i = LEN; i < CAP; ++i) {
+        memory->lists[i] = {i + 1, &memory->lists[(i + 1) % CAP]};
+    }
+    {
+        List* list = &memory->lists[0];
+        for (u64 _ = 0; _ < 10000000; ++_) {
+            list = update(memory, list);
+        }
     }
     {
         List* l0 = memory->lists[get_index(1)].next;
