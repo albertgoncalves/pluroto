@@ -28,9 +28,6 @@ export flags=(
     "-Wno-covered-switch-default"
     "-Wno-extra-semi-stmt"
     "-Wno-padded"
-    "-Wno-unused-function"
-    "-Wno-unused-macros"
-    "-Wno-unused-template"
 )
 
 runc () {

@@ -16,12 +16,6 @@ typedef int32_t i32;
 
 #define null nullptr
 
-#define ERROR()                                                      \
-    {                                                                \
-        fprintf(stderr, "%s:%s:%d\n", __FILE__, __func__, __LINE__); \
-        exit(EXIT_FAILURE);                                          \
-    }
-
 #define EXIT_IF(condition)           \
     if (condition) {                 \
         fprintf(stderr,              \
@@ -233,14 +227,6 @@ Node<K, V>* drop_min(Memory<K, V>* memory, Node<K, V>* node) {
     }
     node->left = drop_min(memory, node->left);
     return balance(node);
-}
-
-template <typename K, typename V>
-static void drop_min(Memory<K, V>* memory) {
-    memory->root = drop_min(memory->root);
-    if (memory->root) {
-        memory->root->color = BLACK;
-    }
 }
 
 template <typename K, typename V>
