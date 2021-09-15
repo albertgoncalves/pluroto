@@ -4,7 +4,7 @@
 
 #define CAP_LISTS  (1 << 6)
 #define CAP_THUNKS (1 << 6)
-#define CAP_ARG3S  (1 << 6)
+#define CAP_ARGS   (1 << 6)
 
 typedef size_t usize;
 
@@ -52,8 +52,7 @@ struct Thunk {
 
 struct Args {
     Memory* memory;
-    List*   a;
-    List*   b;
+    List*   lists[2];
 };
 
 template <typename T, usize N>
@@ -65,7 +64,7 @@ struct Buffer {
 struct Memory {
     Buffer<List, CAP_LISTS>   lists;
     Buffer<Thunk, CAP_THUNKS> thunks;
-    Buffer<Args, CAP_ARG3S>   args;
+    Buffer<Args, CAP_ARGS>    args;
 };
 
 static List* FIBS = null;
@@ -99,15 +98,14 @@ static i64 head(List* list) {
 }
 
 static List* tail(List* list) {
-    force(list->thunk);
-    return list->thunk->body.as_list;
+    return force(list->thunk);
 }
 
 List* zip_sum(Memory*, List*, List*);
 
 static List* f0(void* payload) {
     Args* args = reinterpret_cast<Args*>(payload);
-    return zip_sum(args->memory, tail(args->a), tail(args->b));
+    return zip_sum(args->memory, tail(args->lists[0]), tail(args->lists[1]));
 }
 
 List* zip_sum(Memory* memory, List* a, List* b) {
@@ -115,8 +113,8 @@ List* zip_sum(Memory* memory, List* a, List* b) {
     list->value = head(a) + head(b);
     Args* args = alloc(&memory->args);
     args->memory = memory;
-    args->a = a;
-    args->b = b;
+    args->lists[0] = a;
+    args->lists[1] = b;
     list->thunk = defer(memory, f0, reinterpret_cast<void*>(args));
     return list;
 }
@@ -129,8 +127,7 @@ static List* drop(i32 n, List* list) {
 }
 
 static List* f1(void* payload) {
-    Memory* memory = reinterpret_cast<Memory*>(payload);
-    return zip_sum(memory, FIBS, tail(FIBS));
+    return zip_sum(reinterpret_cast<Memory*>(payload), FIBS, tail(FIBS));
 }
 
 static List* f2(void* payload) {
