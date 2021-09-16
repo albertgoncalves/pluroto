@@ -24,35 +24,40 @@ typedef int64_t i64;
         exit(EXIT_FAILURE);          \
     }
 
-typedef struct List   List;
-typedef struct Thunk  Thunk;
-typedef struct Memory Memory;
+template <typename>
+struct Thunk;
 
+template <typename T>
 struct List {
-    Thunk* thunk;
-    i64    value;
+    Thunk<T>* thunk;
+    T         value;
 };
 
-typedef List* (*Func)(void*);
-
+template <typename T>
 struct ThunkDefer {
-    Func  func;
+    List<T>* (*func)(void*);
     void* payload;
 };
 
+template <typename T>
 union ThunkBody {
-    ThunkDefer as_defer;
-    List*      as_list;
+    ThunkDefer<T> as_defer;
+    List<T>*      as_list;
 };
 
+template <typename T>
 struct Thunk {
-    ThunkBody body;
-    bool      cached;
+    ThunkBody<T> body;
+    bool         cached;
 };
 
+template <typename>
+struct Memory;
+
+template <typename T>
 struct Args {
-    Memory* memory;
-    List*   lists[2];
+    Memory<T>* memory;
+    List<T>*   lists[2];
 };
 
 template <typename T, usize N>
@@ -61,13 +66,14 @@ struct Buffer {
     usize len;
 };
 
+template <typename T>
 struct Memory {
-    Buffer<List, CAP_LISTS>   lists;
-    Buffer<Thunk, CAP_THUNKS> thunks;
-    Buffer<Args, CAP_ARGS>    args;
+    Buffer<List<T>, CAP_LISTS>   lists;
+    Buffer<Thunk<T>, CAP_THUNKS> thunks;
+    Buffer<Args<T>, CAP_ARGS>    args;
 };
 
-static List* FIBS = null;
+static List<i64>* FIBS = null;
 
 template <typename T, usize N>
 static T* alloc(Buffer<T, N>* buffer) {
@@ -75,43 +81,52 @@ static T* alloc(Buffer<T, N>* buffer) {
     return &buffer->items[buffer->len++];
 }
 
-static List* force(Thunk* thunk) {
+template <typename T>
+static List<T>* force(Thunk<T>* thunk) {
     if (thunk->cached) {
         return thunk->body.as_list;
     }
-    List* list = thunk->body.as_defer.func(thunk->body.as_defer.payload);
+    List<T>* list = thunk->body.as_defer.func(thunk->body.as_defer.payload);
     thunk->cached = true;
     thunk->body.as_list = list;
     return list;
 }
 
-static Thunk* defer(Memory* memory, Func func, void* payload) {
-    Thunk* thunk = alloc(&memory->thunks);
+template <typename T>
+static Thunk<T>* defer(Memory<T>* memory,
+                       List<T>* (*func)(void*),
+                       void* payload) {
+    Thunk<T>* thunk = alloc(&memory->thunks);
     thunk->cached = false;
     thunk->body.as_defer.func = func;
     thunk->body.as_defer.payload = payload;
     return thunk;
 }
 
-static i64 head(List* list) {
+template <typename T>
+static T head(List<T>* list) {
     return list->value;
 }
 
-static List* tail(List* list) {
+template <typename T>
+static List<T>* tail(List<T>* list) {
     return force(list->thunk);
 }
 
-List* zip_sum(Memory*, List*, List*);
+template <typename T>
+List<T>* zip_sum(Memory<T>*, List<T>*, List<T>*);
 
-static List* f0(void* payload) {
-    Args* args = reinterpret_cast<Args*>(payload);
+template <typename T>
+static List<T>* f0(void* payload) {
+    Args<T>* args = reinterpret_cast<Args<T>*>(payload);
     return zip_sum(args->memory, tail(args->lists[0]), tail(args->lists[1]));
 }
 
-List* zip_sum(Memory* memory, List* a, List* b) {
-    List* list = alloc(&memory->lists);
+template <typename T>
+List<T>* zip_sum(Memory<T>* memory, List<T>* a, List<T>* b) {
+    List<T>* list = alloc(&memory->lists);
     list->value = head(a) + head(b);
-    Args* args = alloc(&memory->args);
+    Args<T>* args = alloc(&memory->args);
     args->memory = memory;
     args->lists[0] = a;
     args->lists[1] = b;
@@ -119,42 +134,44 @@ List* zip_sum(Memory* memory, List* a, List* b) {
     return list;
 }
 
-static List* drop(i32 n, List* list) {
+template <typename T>
+static List<T>* drop(i32 n, List<T>* list) {
     for (; 0 < n; --n) {
         list = tail(list);
     }
     return list;
 }
 
-static List* f1(void* payload) {
-    return zip_sum(reinterpret_cast<Memory*>(payload), FIBS, tail(FIBS));
+template <typename T>
+static List<T>* f1(void* payload) {
+    return zip_sum(reinterpret_cast<Memory<T>*>(payload), FIBS, tail(FIBS));
 }
 
-static List* f2(void* payload) {
-    Memory* memory = reinterpret_cast<Memory*>(payload);
-    List*   list = alloc(&memory->lists);
+template <typename T>
+static List<T>* f2(void* payload) {
+    Memory<T>* memory = reinterpret_cast<Memory<T>*>(payload);
+    List<T>*   list = alloc(&memory->lists);
     list->value = 1;
     list->thunk = defer(memory, f1, payload);
     return list;
 }
 
 i32 main() {
-    printf("sizeof(List)       : %zu\n"
-           "sizeof(Func)       : %zu\n"
-           "sizeof(ThunkDefer) : %zu\n"
-           "sizeof(ThunkBody)  : %zu\n"
-           "sizeof(Thunk)      : %zu\n"
-           "sizeof(Args)       : %zu\n"
-           "sizeof(Memory)     : %zu\n"
+    printf("sizeof(List<i64>)       : %zu\n"
+           "sizeof(ThunkDefer<i64>) : %zu\n"
+           "sizeof(ThunkBody<i64>)  : %zu\n"
+           "sizeof(Thunk<i64>)      : %zu\n"
+           "sizeof(Args<i64>)       : %zu\n"
+           "sizeof(Memory<i64>)     : %zu\n"
            "\n",
-           sizeof(List),
-           sizeof(Func),
-           sizeof(ThunkDefer),
-           sizeof(ThunkBody),
-           sizeof(Thunk),
-           sizeof(Args),
-           sizeof(Memory));
-    Memory* memory = reinterpret_cast<Memory*>(calloc(1, sizeof(Memory)));
+           sizeof(List<i64>),
+           sizeof(ThunkDefer<i64>),
+           sizeof(ThunkBody<i64>),
+           sizeof(Thunk<i64>),
+           sizeof(Args<i64>),
+           sizeof(Memory<i64>));
+    Memory<i64>* memory =
+        reinterpret_cast<Memory<i64>*>(calloc(1, sizeof(Memory<i64>)));
     {
         FIBS = alloc(&memory->lists);
         FIBS->value = 0;
