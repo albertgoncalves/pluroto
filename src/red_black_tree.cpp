@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <unistd.h>
 
 // NOTE: See `https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf`.
 // NOTE: See `https://algs4.cs.princeton.edu/33balanced/RedBlackBST.java.html`.
@@ -13,8 +13,12 @@ typedef uint32_t u32;
 typedef size_t   usize;
 
 typedef int32_t i32;
+typedef ssize_t isize;
 
 #define null nullptr
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 #define EXIT_IF(condition)           \
     if (condition) {                 \
@@ -24,7 +28,7 @@ typedef int32_t i32;
                 __func__,            \
                 __LINE__,            \
                 #condition);         \
-        exit(EXIT_FAILURE);          \
+        _exit(EXIT_FAILURE);          \
     }
 
 #define RED   true
@@ -302,14 +306,19 @@ static void println(Node<K, V>* node, u8 n) {
     println(node->right, n);
 }
 
+static void* alloc(usize size) {
+    void* memory = sbrk(static_cast<isize>(size));
+    EXIT_IF(memory == reinterpret_cast<void*>(-1));
+    return memory;
+}
+
 i32 main() {
     printf("sizeof(Node<u8, char>)   : %zu\n"
            "sizeof(Memory<u8, char>) : %zu\n",
            sizeof(Node<u8, char>),
            sizeof(Memory<u8, char>));
     Memory<u8, char>* memory =
-        reinterpret_cast<Memory<u8, char>*>(malloc(sizeof(Memory<u8, char>)));
-    EXIT_IF(!memory);
+        reinterpret_cast<Memory<u8, char>*>(alloc(sizeof(Memory<u8, char>)));
     {
         init(memory);
         for (u8 i = 0; i < 1; ++i) {
@@ -361,6 +370,5 @@ i32 main() {
             printf("\n");
         }
     }
-    free(memory);
     return EXIT_SUCCESS;
 }

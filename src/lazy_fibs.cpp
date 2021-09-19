@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 #define CAP_LISTS (1 << 6)
 #define CAP_LAZYS (1 << 6)
@@ -10,6 +14,7 @@ typedef size_t usize;
 
 typedef int32_t i32;
 typedef int64_t i64;
+typedef ssize_t isize;
 
 #define null nullptr
 
@@ -21,7 +26,7 @@ typedef int64_t i64;
                 __func__,            \
                 __LINE__,            \
                 #condition);         \
-        exit(EXIT_FAILURE);          \
+        _exit(EXIT_FAILURE);         \
     }
 
 template <typename T>
@@ -148,6 +153,13 @@ static List<T>* f2(void* payload) {
     return list;
 }
 
+static void* alloc(usize size) {
+    void* memory = sbrk(static_cast<isize>(size));
+    EXIT_IF(memory == reinterpret_cast<void*>(-1));
+    memset(memory, 0, size);
+    return memory;
+}
+
 i32 main() {
     printf("sizeof(List<i64>)             : %zu\n"
            "sizeof(LazyDefer<List<i64>*>) : %zu\n"
@@ -163,7 +175,7 @@ i32 main() {
            sizeof(Args<i64>),
            sizeof(Memory<i64>));
     Memory<i64>* memory =
-        reinterpret_cast<Memory<i64>*>(calloc(1, sizeof(Memory<i64>)));
+        reinterpret_cast<Memory<i64>*>(alloc(sizeof(Memory<i64>)));
     {
         FIBS = alloc(&memory->lists);
         FIBS->value = 0;
@@ -175,6 +187,5 @@ i32 main() {
         printf("%ld\n", x);
         EXIT_IF(x != 12586269025);
     }
-    free(memory);
     return EXIT_SUCCESS;
 }

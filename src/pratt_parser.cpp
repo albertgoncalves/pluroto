@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 // NOTE: See `https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html`.
 
@@ -9,8 +10,12 @@ typedef uint32_t u32;
 typedef size_t   usize;
 
 typedef int32_t i32;
+typedef ssize_t isize;
 
 #define null nullptr
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 #define CAP_NODES (1 << 5)
 #define CAP_LISTS (1 << 5)
@@ -145,7 +150,7 @@ static const Token TOKENS[] = {
 #define ERROR()                                                      \
     {                                                                \
         fprintf(stderr, "%s:%s:%d\n", __FILE__, __func__, __LINE__); \
-        exit(EXIT_FAILURE);                                          \
+        _exit(EXIT_FAILURE);                                         \
     }
 
 #define EXIT_IF(condition)           \
@@ -156,7 +161,7 @@ static const Token TOKENS[] = {
                 __func__,            \
                 __LINE__,            \
                 #condition);         \
-        exit(EXIT_FAILURE);          \
+        _exit(EXIT_FAILURE);         \
     }
 
 static void print(String string) {
@@ -499,10 +504,11 @@ static void println(const Node* node, u8 n) {
     }
 }
 
-static void reset(Memory* memory) {
-    memory->len_nodes = 0;
-    memory->len_lists = 0;
-    memory->cur_tokens = 0;
+static void* alloc(usize size) {
+    void* memory = sbrk(static_cast<isize>(size));
+    EXIT_IF(memory == reinterpret_cast<void*>(-1));
+    memset(memory, 0, size);
+    return memory;
 }
 
 i32 main() {
@@ -522,11 +528,8 @@ i32 main() {
            sizeof(Memory));
     println<Token, COUNT_TOKENS>(TOKENS);
     {
-        Memory* memory = reinterpret_cast<Memory*>(calloc(1, sizeof(Memory)));
-        EXIT_IF(!memory);
-        reset(memory);
+        Memory* memory = reinterpret_cast<Memory*>(alloc(sizeof(Memory)));
         println(parse(memory, 0), 0);
-        free(memory);
     }
     return EXIT_SUCCESS;
 }
