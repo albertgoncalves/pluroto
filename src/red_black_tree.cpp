@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 // NOTE: See `https://www.cs.princeton.edu/~rs/talks/LLRB/LLRB.pdf`.
@@ -28,7 +29,7 @@ typedef ssize_t isize;
                 __func__,            \
                 __LINE__,            \
                 #condition);         \
-        _exit(EXIT_FAILURE);          \
+        _exit(EXIT_FAILURE);         \
     }
 
 #define RED   true
@@ -307,8 +308,13 @@ static void println(Node<K, V>* node, u8 n) {
 }
 
 static void* alloc(usize size) {
-    void* memory = sbrk(static_cast<isize>(size));
-    EXIT_IF(memory == reinterpret_cast<void*>(-1));
+    void* memory = mmap(null,
+                        size,
+                        PROT_READ | PROT_WRITE,
+                        MAP_ANONYMOUS | MAP_PRIVATE,
+                        -1,
+                        0);
+    EXIT_IF(memory == MAP_FAILED);
     return memory;
 }
 

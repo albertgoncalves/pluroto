@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #define EXIT_SUCCESS 0
@@ -154,9 +154,13 @@ static List<T>* f2(void* payload) {
 }
 
 static void* alloc(usize size) {
-    void* memory = sbrk(static_cast<isize>(size));
-    EXIT_IF(memory == reinterpret_cast<void*>(-1));
-    memset(memory, 0, size);
+    void* memory = mmap(null,
+                        size,
+                        PROT_READ | PROT_WRITE,
+                        MAP_ANONYMOUS | MAP_PRIVATE,
+                        -1,
+                        0);
+    EXIT_IF(memory == MAP_FAILED);
     return memory;
 }
 
