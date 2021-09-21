@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include <stdlib.h>
 #include <unistd.h>
 
 typedef size_t usize;
@@ -8,6 +7,9 @@ typedef int32_t i32;
 typedef ssize_t isize;
 
 #define STDOUT 1
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
 
 struct String {
     const char* chars;
@@ -20,11 +22,11 @@ struct String {
         sizeof(literal) - 1, \
     })
 
-#define EXIT_IF(condition)      \
-    {                           \
-        if (condition) {        \
-            exit(EXIT_FAILURE); \
-        }                       \
+#define EXIT_IF(condition)       \
+    {                            \
+        if (condition) {         \
+            _exit(EXIT_FAILURE); \
+        }                        \
     }
 
 static void print(String string) {
