@@ -110,7 +110,6 @@ static void insert(Table<K, V>* table, K key, V value) {
         ++table->len;
     }
     table->items[i] = {key, value, true};
-    return;
 }
 
 // NOTE: See `https://en.wikipedia.org/wiki/Open_addressing`.
