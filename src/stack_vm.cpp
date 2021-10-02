@@ -33,6 +33,8 @@ enum InstTag {
     INST_JNZ,
     INST_SWAP,
     INST_NEW,
+    INST_SV32,
+    INST_RD32,
 };
 
 union Inst {
@@ -97,6 +99,12 @@ static T get(const Stack<T, N>* stack, u32 i) {
 }
 
 template <typename T, u32 N>
+static T* get_pointer(Stack<T, N>* stack, u32 i) {
+    EXIT_IF(stack->len <= i);
+    return &stack->items[i];
+}
+
+template <typename T, u32 N>
 static T pop(Stack<T, N>* stack) {
     EXIT_IF(stack->len == 0);
     return stack->items[--stack->len];
@@ -142,6 +150,24 @@ static void run(Memory* memory) {
             alloc(&memory->nodes)->as_i32 = static_cast<i32>(alloc_offset(
                 &memory->heap,
                 static_cast<u32>(get(&memory->insts, i++).as_i32)));
+            break;
+        }
+        case INST_SV32: {
+            const i32 x = pop(&memory->nodes).as_i32;
+            const i32 heap_index = pop(&memory->nodes).as_i32;
+            const i32 offset = get(&memory->insts, i++).as_i32;
+            // NOTE: Bounds check?
+            i32* bytes = reinterpret_cast<i32*>(
+                &memory->heap.items[heap_index + offset]);
+            *bytes = x;
+            break;
+        }
+        case INST_RD32: {
+            const i32 heap_index = pop(&memory->nodes).as_i32;
+            const i32 offset = get(&memory->insts, i++).as_i32;
+            alloc(&memory->nodes)->as_i32 = *reinterpret_cast<i32*>(
+                get_pointer(&memory->heap,
+                            static_cast<u32>(heap_index + offset)));
             break;
         }
         default: {
@@ -238,10 +264,43 @@ static void test_2(Memory* memory) {
         inst<INST_NEW>(memory);
         inst_i32(memory, 4);
         inst<INST_HALT>(memory);
-
-        EXIT_IF(memory->insts.len != 6);
     }
-    TEST(memory, 4, 8);
+    TEST(memory, 6, 4, 8);
+}
+
+static void test_3(Memory* memory) {
+    reset(memory);
+    {
+        inst<INST_NEW>(memory);
+        inst_i32(memory, 8);
+        // [heap_index:0]
+
+        inst<INST_DROP>(memory);
+        // []
+
+        inst<INST_NEW>(memory);
+        inst_i32(memory, 12);
+        // [heap_index:8]
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, -123);
+        // [heap_index:0, x:-123]
+
+        inst<INST_SV32>(memory);
+        inst_i32(memory, 4);
+        // []
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 8);
+        // [heap_index:8]
+
+        inst<INST_RD32>(memory);
+        inst_i32(memory, 4);
+        // [x:?]
+
+        inst<INST_HALT>(memory);
+    }
+    TEST(memory, 14, -123, 20);
 }
 
 i32 main() {
@@ -257,6 +316,7 @@ i32 main() {
     test_0(memory);
     test_1(memory);
     test_2(memory);
+    test_3(memory);
     printf("\nDone!\n");
     return EXIT_SUCCESS;
 }
