@@ -15,7 +15,7 @@ typedef ssize_t isize;
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
-#define CAP_INSTS (1 << 5)
+#define CAP_INSTS (1 << 6)
 #define CAP_NODES (1 << 5)
 #define CAP_HEAP  (1 << 5)
 
@@ -331,6 +331,102 @@ static void test_3(Memory* memory) {
     TEST(memory, 14, -123, 20);
 }
 
+static void test_4(Memory* memory) {
+    reset(memory);
+    {
+        /*  i32 main() {
+         *      i32 addr = new(12);
+         *      *(&HEAP[addr + 0] as i32*) = f;
+         *      *(&HEAP[addr + 4] as i32*) = -7;
+         *      *(&HEAP[addr + 8] as i32*) = 6;
+         *      return HEAP[addr + 0](addr);
+         *  }
+         *
+         *  i32 f(i32 addr) {
+         *      return HEAP[addr + 4] - HEAP[addr + 8];
+         *  }
+         */
+        inst<INST_NEW>(memory);
+        inst_i32(memory, 12);
+        // [heap_index:0]
+
+        inst<INST_DUP>(memory);
+        // [heap_index:0, heap_index:0]
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 30); // instruction address of `f`
+        // [heap_index:0, heap_index:0, f:?]
+
+        inst<INST_SV32>(memory);
+        inst_i32(memory, 0);
+        // [heap_index:0]
+
+        inst<INST_DUP>(memory);
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, -7);
+
+        inst<INST_SV32>(memory);
+        inst_i32(memory, 4);
+
+        inst<INST_DUP>(memory);
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 6);
+
+        inst<INST_SV32>(memory);
+        inst_i32(memory, 8);
+        // [heap_index:0]
+
+        inst<INST_DUP>(memory);
+        // [heap_index:0, heap_index:0]
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 27);
+        // [heap_index:0, heap_index:0, return_addr:?]
+
+        inst<INST_SWAP>(memory);
+        // [heap_index:0, return_addr:?, heap_index:0]
+
+        inst<INST_DUP>(memory);
+        // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
+
+        inst<INST_RD32>(memory);
+        inst_i32(memory, 0); // instruction address of `f`
+        // [heap_index:0, return_addr:?, heap_index:0, f:?]
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 1);
+
+        inst<INST_JNZ>(memory); // f(heap_index)
+        // [heap_index:0, return_addr:?, heap_index:0]
+
+        inst<INST_SWAP>(memory); // return address - 27
+        inst<INST_DROP>(memory);
+        inst<INST_HALT>(memory);
+
+        inst<INST_DUP>(memory); // f - 30
+        // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
+
+        inst<INST_RD32>(memory);
+        inst_i32(memory, 4);
+
+        inst<INST_SWAP>(memory);
+
+        inst<INST_RD32>(memory);
+        inst_i32(memory, 8);
+
+        inst<INST_SUB>(memory);
+        inst<INST_SWAP>(memory);
+
+        inst<INST_PUSH>(memory);
+        inst_i32(memory, 1);
+
+        inst<INST_JNZ>(memory);
+    }
+    TEST(memory, 41, -13, 12);
+}
+
 i32 main() {
     printf("\n"
            "sizeof(Inst)     : %zu\n"
@@ -345,6 +441,7 @@ i32 main() {
     test_1(memory);
     test_2(memory);
     test_3(memory);
+    test_4(memory);
     printf("\nDone!\n");
     return EXIT_SUCCESS;
 }
