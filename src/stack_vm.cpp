@@ -225,6 +225,10 @@ static void reset(Memory* memory) {
 static void test_0(Memory* memory) {
     reset(memory);
     {
+        /*  i32 main() {
+         *      return f();
+         *  }
+         */
         inst<INST_PUSH>(memory);
         inst_i32(memory, 7);
         inst<INST_PUSH>(memory);
@@ -234,6 +238,10 @@ static void test_0(Memory* memory) {
         inst<INST_JNZ>(memory);
         inst<INST_HALT>(memory);
 
+        /*  i32 f() {
+         *      return -5 - 7;
+         *  }
+         */
         inst<INST_PUSH>(memory);
         inst_i32(memory, -5);
         inst<INST_PUSH>(memory);
@@ -265,6 +273,12 @@ static void test_1(Memory* memory) {
 static void test_2(Memory* memory) {
     reset(memory);
     {
+        /*  i32 main() {
+         *      (void)new(4);
+         *      i32 addr = new(4);
+         *      return addr;
+         *  }
+         */
         inst<INST_NEW>(memory);
         inst_i32(memory, 4);
         inst<INST_DROP>(memory);
@@ -278,6 +292,13 @@ static void test_2(Memory* memory) {
 static void test_3(Memory* memory) {
     reset(memory);
     {
+        /*  i32 main() {
+         *      (void)new(8);
+         *      i32 addr = new(12);
+         *      *(&HEAP[addr + 4] as i32*) = -123;
+         *      return *(&HEAP[addr + 4] as i32*);
+         *  }
+         */
         inst<INST_NEW>(memory);
         inst_i32(memory, 8);
         // [heap_index:0]
