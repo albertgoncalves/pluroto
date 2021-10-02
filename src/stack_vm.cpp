@@ -17,6 +17,7 @@ typedef ssize_t isize;
 
 #define CAP_INSTS (1 << 5)
 #define CAP_NODES (1 << 5)
+#define CAP_HEAP  (1 << 5)
 
 template <typename T, u32 N>
 struct Stack {
@@ -31,6 +32,7 @@ enum InstTag {
     INST_SUB,
     INST_JNZ,
     INST_SWAP,
+    INST_NEW,
 };
 
 union Inst {
@@ -45,6 +47,7 @@ union Node {
 struct Memory {
     Stack<Inst, CAP_INSTS> insts;
     Stack<Node, CAP_NODES> nodes;
+    Stack<u8, CAP_HEAP>    heap;
 };
 
 #define EXIT()                                                       \
@@ -68,6 +71,21 @@ template <typename T, u32 N>
 static T* alloc(Stack<T, N>* stack) {
     EXIT_IF(N <= stack->len);
     return &stack->items[stack->len++];
+}
+
+template <typename T, u32 N>
+static T* alloc(Stack<T, N>* stack, u32 n) {
+    EXIT_IF(n == 0);
+    u32 len = stack->len + n;
+    EXIT_IF(N < len);
+    T* x = &stack->items[stack->len];
+    stack->len = len;
+    return x;
+}
+
+template <typename T, u32 N>
+static u32 alloc_offset(Stack<T, N>* stack, u32 n) {
+    return static_cast<u32>(alloc(stack, n) - &stack->items[0]);
 }
 
 template <typename T, u32 N>
@@ -118,6 +136,12 @@ static void run(Memory* memory) {
             alloc(&memory->nodes)->as_i32 = l;
             break;
         }
+        case INST_NEW: {
+            alloc(&memory->nodes)->as_i32 = static_cast<i32>(alloc_offset(
+                &memory->heap,
+                static_cast<u32>(get(&memory->insts, i++).as_i32)));
+            break;
+        }
         default: {
             EXIT();
         }
@@ -152,11 +176,13 @@ static void reset(Memory* memory) {
     memory->nodes.len = 0;
 }
 
-#define RUN(memory)                                 \
-    {                                               \
-        run(memory);                                \
-        printf("%d\n", pop(&memory->nodes).as_i32); \
-        EXIT_IF(memory->nodes.len != 0);            \
+#define TEST(memory, node_i32, heap_len)                 \
+    {                                                    \
+        run(memory);                                     \
+        EXIT_IF(pop(&memory->nodes).as_i32 != node_i32); \
+        EXIT_IF(memory->nodes.len != 0);                 \
+        EXIT_IF(memory->heap.len != heap_len);           \
+        fputc('.', stdout);                              \
     }
 
 static void test_0(Memory* memory) {
@@ -183,7 +209,7 @@ static void test_0(Memory* memory) {
 
         EXIT_IF(memory->insts.len != 17);
     }
-    RUN(memory);
+    TEST(memory, -12, 0);
 }
 
 static void test_1(Memory* memory) {
@@ -200,7 +226,22 @@ static void test_1(Memory* memory) {
 
         EXIT_IF(memory->insts.len != 8);
     }
-    RUN(memory);
+    TEST(memory, 7, 0);
+}
+
+static void test_2(Memory* memory) {
+    reset(memory);
+    {
+        inst<INST_NEW>(memory);
+        inst_i32(memory, 4);
+        inst<INST_DROP>(memory);
+        inst<INST_NEW>(memory);
+        inst_i32(memory, 4);
+        inst<INST_HALT>(memory);
+
+        EXIT_IF(memory->insts.len != 6);
+    }
+    TEST(memory, 4, 8);
 }
 
 i32 main() {
@@ -215,6 +256,7 @@ i32 main() {
     Memory* memory = reinterpret_cast<Memory*>(alloc(sizeof(Memory)));
     test_0(memory);
     test_1(memory);
-    printf("Done!\n");
+    test_2(memory);
+    printf("\nDone!\n");
     return EXIT_SUCCESS;
 }
