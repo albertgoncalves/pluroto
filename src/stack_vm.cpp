@@ -52,12 +52,14 @@ struct Memory {
 
 #define EXIT()                                                       \
     {                                                                \
+        fflush(stdout);                                              \
         fprintf(stderr, "%s:%s:%d\n", __FILE__, __func__, __LINE__); \
         _exit(EXIT_FAILURE);                                         \
     }
 
 #define EXIT_IF(condition)           \
     if (condition) {                 \
+        fflush(stdout);              \
         fprintf(stderr,              \
                 "%s:%s:%d \"%s\"\n", \
                 __FILE__,            \
@@ -123,9 +125,9 @@ static void run(Memory* memory) {
         }
         case INST_JNZ: {
             const i32 jump = pop(&memory->nodes).as_i32;
-            const i32 index = pop(&memory->nodes).as_i32;
+            const i32 insts_index = pop(&memory->nodes).as_i32;
             if (jump) {
-                i = static_cast<u32>(index);
+                i = static_cast<u32>(insts_index);
             }
             break;
         }
@@ -177,8 +179,9 @@ static void reset(Memory* memory) {
     memory->heap.len = 0;
 }
 
-#define TEST(memory, node_i32, heap_len)                 \
+#define TEST(memory, insts_len, node_i32, heap_len)      \
     {                                                    \
+        EXIT_IF(memory->insts.len != insts_len);         \
         run(memory);                                     \
         EXIT_IF(pop(&memory->nodes).as_i32 != node_i32); \
         EXIT_IF(memory->nodes.len != 0);                 \
@@ -207,10 +210,8 @@ static void test_0(Memory* memory) {
         inst<INST_PUSH>(memory);
         inst_i32(memory, 1);
         inst<INST_JNZ>(memory);
-
-        EXIT_IF(memory->insts.len != 17);
     }
-    TEST(memory, -12, 0);
+    TEST(memory, 17, -12, 0);
 }
 
 static void test_1(Memory* memory) {
@@ -224,10 +225,8 @@ static void test_1(Memory* memory) {
         inst_i32(memory, 0);
         inst<INST_JNZ>(memory);
         inst<INST_HALT>(memory);
-
-        EXIT_IF(memory->insts.len != 8);
     }
-    TEST(memory, 7, 0);
+    TEST(memory, 8, 7, 0);
 }
 
 static void test_2(Memory* memory) {
