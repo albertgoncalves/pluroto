@@ -83,27 +83,27 @@ static T pop(Stack<T, N>* stack) {
 
 static void run(Memory* memory) {
     for (u32 i = 0;;) {
-        const Inst inst = get(&memory->insts, i);
+        const Inst inst = get(&memory->insts, i++);
         switch (inst.as_tag) {
         case INST_HALT: {
             return;
         }
         case INST_PUSH: {
-            alloc(&memory->nodes)->as_i32 = get(&memory->insts, ++i).as_i32;
-            ++i;
+            alloc(&memory->nodes)->as_i32 = get(&memory->insts, i++).as_i32;
             break;
         }
         case INST_SUB: {
             const i32 r = pop(&memory->nodes).as_i32;
             const i32 l = pop(&memory->nodes).as_i32;
             alloc(&memory->nodes)->as_i32 = l - r;
-            ++i;
             break;
         }
         case INST_JNZ: {
             const i32 jump = pop(&memory->nodes).as_i32;
             const i32 index = pop(&memory->nodes).as_i32;
-            i = jump ? static_cast<u32>(index) : i + 1;
+            if (jump) {
+                i = static_cast<u32>(index);
+            }
             break;
         }
         case INST_SWAP: {
@@ -111,7 +111,6 @@ static void run(Memory* memory) {
             const i32 l = pop(&memory->nodes).as_i32;
             alloc(&memory->nodes)->as_i32 = r;
             alloc(&memory->nodes)->as_i32 = l;
-            ++i;
             break;
         }
         default: {
