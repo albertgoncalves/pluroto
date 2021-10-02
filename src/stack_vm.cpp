@@ -26,6 +26,7 @@ struct Stack {
 
 enum InstTag {
     INST_HALT = 0,
+    INST_DROP,
     INST_PUSH,
     INST_SUB,
     INST_JNZ,
@@ -87,6 +88,10 @@ static void run(Memory* memory) {
         switch (inst.as_tag) {
         case INST_HALT: {
             return;
+        }
+        case INST_DROP: {
+            (void)pop(&memory->nodes).as_i32;
+            break;
         }
         case INST_PUSH: {
             alloc(&memory->nodes)->as_i32 = get(&memory->insts, i++).as_i32;
