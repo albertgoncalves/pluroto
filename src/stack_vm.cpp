@@ -174,6 +174,7 @@ static void* alloc(usize size) {
 static void reset(Memory* memory) {
     memory->insts.len = 0;
     memory->nodes.len = 0;
+    memory->heap.len = 0;
 }
 
 #define TEST(memory, node_i32, heap_len)                 \
