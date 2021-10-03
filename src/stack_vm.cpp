@@ -55,7 +55,7 @@ struct Unresolved {
     u32*  label;
 };
 
-struct Memory {
+struct Vm {
     Stack<Inst, CAP_INSTS>            insts;
     Stack<Node, CAP_NODES>            nodes;
     Stack<u8, CAP_HEAP>               heap;
@@ -121,85 +121,83 @@ static T pop(Stack<T, N>* stack) {
     return stack->items[--stack->len];
 }
 
-static void run(Memory* memory) {
-    for (u32 i = 0; i < memory->unresolved.len; ++i) {
-        Unresolved unresolved = memory->unresolved.items[i];
+static void run(Vm* vm) {
+    for (u32 i = 0; i < vm->unresolved.len; ++i) {
+        Unresolved unresolved = vm->unresolved.items[i];
         unresolved.inst->as_i32 = static_cast<i32>(*unresolved.label);
     }
     for (u32 i = 0;;) {
-        const Inst inst = get(&memory->insts, i++);
+        const Inst inst = get(&vm->insts, i++);
         switch (inst.as_tag) {
         case INST_HALT: {
             return;
         }
         case INST_DUP: {
-            alloc(&memory->nodes)->as_i32 =
-                get(&memory->nodes,
-                    (memory->nodes.len - 1) -
-                        static_cast<u32>(get(&memory->insts, i++).as_i32))
+            alloc(&vm->nodes)->as_i32 =
+                get(&vm->nodes,
+                    (vm->nodes.len - 1) -
+                        static_cast<u32>(get(&vm->insts, i++).as_i32))
                     .as_i32;
             break;
         }
         case INST_STO: {
-            const i32 x = pop(&memory->nodes).as_i32;
-            const i32 offset = get(&memory->insts, i++).as_i32;
-            get_pointer(&memory->nodes,
-                        (memory->nodes.len - 1) - static_cast<u32>(offset))
+            const i32 x = pop(&vm->nodes).as_i32;
+            const i32 offset = get(&vm->insts, i++).as_i32;
+            get_pointer(&vm->nodes,
+                        (vm->nodes.len - 1) - static_cast<u32>(offset))
                 ->as_i32 = x;
             break;
         }
         case INST_DROP: {
-            memory->nodes.len -=
-                static_cast<u32>(get(&memory->insts, i++).as_i32);
+            vm->nodes.len -= static_cast<u32>(get(&vm->insts, i++).as_i32);
             break;
         }
         case INST_PUSH: {
-            alloc(&memory->nodes)->as_i32 = get(&memory->insts, i++).as_i32;
+            alloc(&vm->nodes)->as_i32 = get(&vm->insts, i++).as_i32;
             break;
         }
         case INST_SUB: {
-            const i32 r = pop(&memory->nodes).as_i32;
-            const i32 l = pop(&memory->nodes).as_i32;
-            alloc(&memory->nodes)->as_i32 = l - r;
+            const i32 r = pop(&vm->nodes).as_i32;
+            const i32 l = pop(&vm->nodes).as_i32;
+            alloc(&vm->nodes)->as_i32 = l - r;
             break;
         }
         case INST_JNZ: {
-            const i32 jump = pop(&memory->nodes).as_i32;
-            const i32 insts_index = pop(&memory->nodes).as_i32;
+            const i32 jump = pop(&vm->nodes).as_i32;
+            const i32 insts_index = pop(&vm->nodes).as_i32;
             if (jump) {
                 i = static_cast<u32>(insts_index);
             }
             break;
         }
         case INST_SWAP: {
-            const i32 r = pop(&memory->nodes).as_i32;
-            const i32 l = pop(&memory->nodes).as_i32;
-            alloc(&memory->nodes)->as_i32 = r;
-            alloc(&memory->nodes)->as_i32 = l;
+            const i32 r = pop(&vm->nodes).as_i32;
+            const i32 l = pop(&vm->nodes).as_i32;
+            alloc(&vm->nodes)->as_i32 = r;
+            alloc(&vm->nodes)->as_i32 = l;
             break;
         }
         case INST_NEW: {
-            alloc(&memory->nodes)->as_i32 = static_cast<i32>(alloc_offset(
-                &memory->heap,
-                static_cast<u32>(get(&memory->insts, i++).as_i32)));
+            alloc(&vm->nodes)->as_i32 = static_cast<i32>(
+                alloc_offset(&vm->heap,
+                             static_cast<u32>(get(&vm->insts, i++).as_i32)));
             break;
         }
         case INST_SV32: {
-            const i32 x = pop(&memory->nodes).as_i32;
-            const i32 heap_index = pop(&memory->nodes).as_i32;
-            const i32 offset = get(&memory->insts, i++).as_i32;
+            const i32 x = pop(&vm->nodes).as_i32;
+            const i32 heap_index = pop(&vm->nodes).as_i32;
+            const i32 offset = get(&vm->insts, i++).as_i32;
             // NOTE: Bounds check?
-            i32* bytes = reinterpret_cast<i32*>(
-                &memory->heap.items[heap_index + offset]);
+            i32* bytes =
+                reinterpret_cast<i32*>(&vm->heap.items[heap_index + offset]);
             *bytes = x;
             break;
         }
         case INST_RD32: {
-            const i32 heap_index = pop(&memory->nodes).as_i32;
-            const i32 offset = get(&memory->insts, i++).as_i32;
-            alloc(&memory->nodes)->as_i32 = *reinterpret_cast<i32*>(
-                get_pointer(&memory->heap,
-                            static_cast<u32>(heap_index + offset)));
+            const i32 heap_index = pop(&vm->nodes).as_i32;
+            const i32 offset = get(&vm->insts, i++).as_i32;
+            alloc(&vm->nodes)->as_i32 = *reinterpret_cast<i32*>(
+                get_pointer(&vm->heap, static_cast<u32>(heap_index + offset)));
             break;
         }
         default: {
@@ -210,26 +208,26 @@ static void run(Memory* memory) {
 }
 
 template <InstTag X>
-static void inst(Memory* memory) {
-    Inst* inst = alloc(&memory->insts);
+static void inst(Vm* vm) {
+    Inst* inst = alloc(&vm->insts);
     inst->as_tag = X;
 }
 
-static void inst_i32(Memory* memory, i32 x) {
-    Inst* inst = alloc(&memory->insts);
+static void inst_i32(Vm* vm, i32 x) {
+    Inst* inst = alloc(&vm->insts);
     inst->as_i32 = x;
 }
 
-static void inst_label(Memory* memory, u32 label_index) {
+static void inst_label(Vm* vm, u32 label_index) {
     EXIT_IF(CAP_LABELS <= label_index);
-    Unresolved* unresolved = alloc(&memory->unresolved);
-    unresolved->inst = alloc(&memory->insts);
-    unresolved->label = &memory->labels.items[label_index];
+    Unresolved* unresolved = alloc(&vm->unresolved);
+    unresolved->inst = alloc(&vm->insts);
+    unresolved->label = &vm->labels.items[label_index];
 }
 
-static void set_label(Memory* memory, u32 label_index) {
+static void set_label(Vm* vm, u32 label_index) {
     EXIT_IF(CAP_LABELS <= label_index);
-    memory->labels.items[label_index] = memory->insts.len;
+    vm->labels.items[label_index] = vm->insts.len;
 }
 
 static void* alloc(usize size) {
@@ -243,78 +241,78 @@ static void* alloc(usize size) {
     return memory;
 }
 
-static void reset(Memory* memory) {
-    memory->insts.len = 0;
-    memory->nodes.len = 0;
-    memory->heap.len = 0;
-    memory->labels.len = 0;
-    memory->unresolved.len = 0;
+static void reset(Vm* vm) {
+    vm->insts.len = 0;
+    vm->nodes.len = 0;
+    vm->heap.len = 0;
+    vm->labels.len = 0;
+    vm->unresolved.len = 0;
 }
 
-#define TEST(memory, insts_len, node_i32, heap_len)      \
-    {                                                    \
-        EXIT_IF(memory->insts.len != insts_len);         \
-        run(memory);                                     \
-        EXIT_IF(pop(&memory->nodes).as_i32 != node_i32); \
-        EXIT_IF(memory->nodes.len != 0);                 \
-        EXIT_IF(memory->heap.len != heap_len);           \
-        fputc('.', stdout);                              \
+#define TEST(vm, insts_len, node_i32, heap_len)      \
+    {                                                \
+        EXIT_IF(vm->insts.len != insts_len);         \
+        run(vm);                                     \
+        EXIT_IF(pop(&vm->nodes).as_i32 != node_i32); \
+        EXIT_IF(vm->nodes.len != 0);                 \
+        EXIT_IF(vm->heap.len != heap_len);           \
+        fputc('.', stdout);                          \
     }
 
-static void test_0(Memory* memory) {
-    reset(memory);
+static void test_0(Vm* vm) {
+    reset(vm);
     {
         /*  i32 main() {
          *      return f();
          *  }
          */
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 0);
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 1);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 1);
-        inst<INST_JNZ>(memory);
-        set_label(memory, 0);
-        inst<INST_HALT>(memory);
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 0);
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 1);
+        inst<INST_JNZ>(vm);
+        set_label(vm, 0);
+        inst<INST_HALT>(vm);
 
         /*  i32 f() {
          *      return -5 - 7;
          *  }
          */
-        set_label(memory, 1);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, -5);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 7);
-        inst<INST_SUB>(memory);
-        inst<INST_SWAP>(memory);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 1);
-        inst<INST_JNZ>(memory);
+        set_label(vm, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, -5);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 7);
+        inst<INST_SUB>(vm);
+        inst<INST_SWAP>(vm);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 1);
+        inst<INST_JNZ>(vm);
     }
-    TEST(memory, 17, -12, 0);
+    TEST(vm, 17, -12, 0);
 }
 
-static void test_1(Memory* memory) {
-    reset(memory);
+static void test_1(Vm* vm) {
+    reset(vm);
     {
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 0);
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 1);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 0);
-        inst<INST_JNZ>(memory);
-        set_label(memory, 0);
-        inst<INST_HALT>(memory);
-        set_label(memory, 1);
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 0);
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 0);
+        inst<INST_JNZ>(vm);
+        set_label(vm, 0);
+        inst<INST_HALT>(vm);
+        set_label(vm, 1);
     }
-    TEST(memory, 8, 7, 0);
+    TEST(vm, 8, 7, 0);
 }
 
-static void test_2(Memory* memory) {
-    reset(memory);
+static void test_2(Vm* vm) {
+    reset(vm);
     {
         /*  i32 main() {
          *      (void)new(4);
@@ -322,19 +320,19 @@ static void test_2(Memory* memory) {
          *      return addr;
          *  }
          */
-        inst<INST_NEW>(memory);
-        inst_i32(memory, 4);
-        inst<INST_DROP>(memory);
-        inst_i32(memory, 1);
-        inst<INST_NEW>(memory);
-        inst_i32(memory, 4);
-        inst<INST_HALT>(memory);
+        inst<INST_NEW>(vm);
+        inst_i32(vm, 4);
+        inst<INST_DROP>(vm);
+        inst_i32(vm, 1);
+        inst<INST_NEW>(vm);
+        inst_i32(vm, 4);
+        inst<INST_HALT>(vm);
     }
-    TEST(memory, 7, 4, 8);
+    TEST(vm, 7, 4, 8);
 }
 
-static void test_3(Memory* memory) {
-    reset(memory);
+static void test_3(Vm* vm) {
+    reset(vm);
     {
         /*  i32 main() {
          *      (void)new(8);
@@ -343,41 +341,41 @@ static void test_3(Memory* memory) {
          *      return *(&HEAP[addr + 4] as i32*);
          *  }
          */
-        inst<INST_NEW>(memory);
-        inst_i32(memory, 8);
+        inst<INST_NEW>(vm);
+        inst_i32(vm, 8);
         // [heap_index:0]
 
-        inst<INST_DROP>(memory);
-        inst_i32(memory, 1);
+        inst<INST_DROP>(vm);
+        inst_i32(vm, 1);
         // []
 
-        inst<INST_NEW>(memory);
-        inst_i32(memory, 12);
+        inst<INST_NEW>(vm);
+        inst_i32(vm, 12);
         // [heap_index:8]
 
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, -123);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, -123);
         // [heap_index:0, x:-123]
 
-        inst<INST_SV32>(memory);
-        inst_i32(memory, 4);
+        inst<INST_SV32>(vm);
+        inst_i32(vm, 4);
         // []
 
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 8);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 8);
         // [heap_index:8]
 
-        inst<INST_RD32>(memory);
-        inst_i32(memory, 4);
+        inst<INST_RD32>(vm);
+        inst_i32(vm, 4);
         // [x:?]
 
-        inst<INST_HALT>(memory);
+        inst<INST_HALT>(vm);
     }
-    TEST(memory, 15, -123, 20);
+    TEST(vm, 15, -123, 20);
 }
 
-static void test_4(Memory* memory) {
-    reset(memory);
+static void test_4(Vm* vm) {
+    reset(vm);
     {
         /*  i32 main() {
          *      i32 addr = new(12);
@@ -387,102 +385,102 @@ static void test_4(Memory* memory) {
          *      return HEAP[addr + 0](addr);
          *  }
          */
-        inst<INST_NEW>(memory);
-        inst_i32(memory, 12);
+        inst<INST_NEW>(vm);
+        inst_i32(vm, 12);
         // [heap_index:0]
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 0);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 0);
         // [heap_index:0, heap_index:0]
 
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 0); // instruction address of `f`
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 0); // instruction address of `f`
         // [heap_index:0, heap_index:0, f:?]
 
-        inst<INST_SV32>(memory);
-        inst_i32(memory, 0);
+        inst<INST_SV32>(vm);
+        inst_i32(vm, 0);
         // [heap_index:0]
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 0);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, -7);
-        inst<INST_SV32>(memory);
-        inst_i32(memory, 4);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 0);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, -7);
+        inst<INST_SV32>(vm);
+        inst_i32(vm, 4);
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 0);
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 6);
-        inst<INST_SV32>(memory);
-        inst_i32(memory, 8);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 0);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 6);
+        inst<INST_SV32>(vm);
+        inst_i32(vm, 8);
 
-        inst<INST_PUSH>(memory);
-        inst_label(memory, 1);
+        inst<INST_PUSH>(vm);
+        inst_label(vm, 1);
         // [heap_index:0, return_addr:?]
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 1);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 1);
         // [heap_index:0, return_addr:?, heap_index:0]
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 0);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 0);
         // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
 
-        inst<INST_RD32>(memory);
-        inst_i32(memory, 0); // instruction address of `f`
+        inst<INST_RD32>(vm);
+        inst_i32(vm, 0); // instruction address of `f`
         // [heap_index:0, return_addr:?, heap_index:0, f:?]
 
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 1);
 
-        inst<INST_JNZ>(memory); // f(heap_index)
+        inst<INST_JNZ>(vm); // f(heap_index)
         // [heap_index:0, return_addr:?, heap_index:0]
 
-        set_label(memory, 1);
-        inst<INST_STO>(memory);
-        inst_i32(memory, 0);
+        set_label(vm, 1);
+        inst<INST_STO>(vm);
+        inst_i32(vm, 0);
 
-        inst<INST_HALT>(memory);
+        inst<INST_HALT>(vm);
 
         /*  i32 f(i32 addr) {
          *      return HEAP[addr + 4] - HEAP[addr + 8];
          *  }
          */
-        set_label(memory, 0);
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 0);
+        set_label(vm, 0);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 0);
         // [..., return_addr:?, heap_index:0, heap_index:0]
 
-        inst<INST_RD32>(memory);
-        inst_i32(memory, 4);
+        inst<INST_RD32>(vm);
+        inst_i32(vm, 4);
         // [..., return_addr:?, heap_index:0, HEAP[addr + 4]]
 
-        inst<INST_DUP>(memory);
-        inst_i32(memory, 1);
+        inst<INST_DUP>(vm);
+        inst_i32(vm, 1);
         // [..., return_addr:?, heap_index:0, HEAP[addr + 4], heap_index:0]
 
-        inst<INST_RD32>(memory);
-        inst_i32(memory, 8);
+        inst<INST_RD32>(vm);
+        inst_i32(vm, 8);
         // [..., return_addr:?, heap_index:0, HEAP[addr + 4], HEAP[addr + 8]]
 
-        inst<INST_SUB>(memory);
+        inst<INST_SUB>(vm);
         // [..., return_addr:?, heap_index:0, HEAP[addr + 4]-HEAP[addr + 8]]
 
-        inst<INST_STO>(memory);
-        inst_i32(memory, 0);
+        inst<INST_STO>(vm);
+        inst_i32(vm, 0);
         // [..., return_addr:?, HEAP[addr + 4]-HEAP[addr + 8]]
 
-        inst<INST_SWAP>(memory);
+        inst<INST_SWAP>(vm);
         // [..., HEAP[addr + 4]-HEAP[addr + 8], return_addr:?]
 
-        inst<INST_PUSH>(memory);
-        inst_i32(memory, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, 1);
 
-        inst<INST_JNZ>(memory);
+        inst<INST_JNZ>(vm);
         // [..., HEAP[addr + 4]-HEAP[addr + 8]]
     }
-    TEST(memory, 49, -13, 12);
+    TEST(vm, 49, -13, 12);
 }
 
 i32 main() {
@@ -490,18 +488,18 @@ i32 main() {
            "sizeof(Inst)       : %zu\n"
            "sizeof(Node)       : %zu\n"
            "sizeof(Unresolved) : %zu\n"
-           "sizeof(Memory)     : %zu\n"
+           "sizeof(Vm)         : %zu\n"
            "\n",
            sizeof(Inst),
            sizeof(Node),
            sizeof(Unresolved),
-           sizeof(Memory));
-    Memory* memory = reinterpret_cast<Memory*>(alloc(sizeof(Memory)));
-    test_0(memory);
-    test_1(memory);
-    test_2(memory);
-    test_3(memory);
-    test_4(memory);
+           sizeof(Vm));
+    Vm* vm = reinterpret_cast<Vm*>(alloc(sizeof(Vm)));
+    test_0(vm);
+    test_1(vm);
+    test_2(vm);
+    test_3(vm);
+    test_4(vm);
     printf("\nDone!\n");
     return EXIT_SUCCESS;
 }
