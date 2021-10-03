@@ -28,6 +28,7 @@ struct Stack {
 enum InstTag {
     INST_HALT = 0,
     INST_DUP,
+    INST_STO,
     INST_DROP,
     INST_PUSH,
     INST_SUB,
@@ -119,13 +120,24 @@ static void run(Memory* memory) {
             return;
         }
         case INST_DUP: {
-            i32 x = pop(&memory->nodes).as_i32;
-            alloc(&memory->nodes)->as_i32 = x;
-            alloc(&memory->nodes)->as_i32 = x;
+            alloc(&memory->nodes)->as_i32 =
+                get(&memory->nodes,
+                    (memory->nodes.len - 1) -
+                        static_cast<u32>(get(&memory->insts, i++).as_i32))
+                    .as_i32;
+            break;
+        }
+        case INST_STO: {
+            const i32 x = pop(&memory->nodes).as_i32;
+            const i32 offset = get(&memory->insts, i++).as_i32;
+            get_pointer(&memory->nodes,
+                        (memory->nodes.len - 1) - static_cast<u32>(offset))
+                ->as_i32 = x;
             break;
         }
         case INST_DROP: {
-            (void)pop(&memory->nodes).as_i32;
+            memory->nodes.len -=
+                static_cast<u32>(get(&memory->insts, i++).as_i32);
             break;
         }
         case INST_PUSH: {
@@ -282,11 +294,12 @@ static void test_2(Memory* memory) {
         inst<INST_NEW>(memory);
         inst_i32(memory, 4);
         inst<INST_DROP>(memory);
+        inst_i32(memory, 1);
         inst<INST_NEW>(memory);
         inst_i32(memory, 4);
         inst<INST_HALT>(memory);
     }
-    TEST(memory, 6, 4, 8);
+    TEST(memory, 7, 4, 8);
 }
 
 static void test_3(Memory* memory) {
@@ -304,6 +317,7 @@ static void test_3(Memory* memory) {
         // [heap_index:0]
 
         inst<INST_DROP>(memory);
+        inst_i32(memory, 1);
         // []
 
         inst<INST_NEW>(memory);
@@ -328,7 +342,7 @@ static void test_3(Memory* memory) {
 
         inst<INST_HALT>(memory);
     }
-    TEST(memory, 14, -123, 20);
+    TEST(memory, 15, -123, 20);
 }
 
 static void test_4(Memory* memory) {
@@ -341,20 +355,17 @@ static void test_4(Memory* memory) {
          *      *(&HEAP[addr + 8] as i32*) = 6;
          *      return HEAP[addr + 0](addr);
          *  }
-         *
-         *  i32 f(i32 addr) {
-         *      return HEAP[addr + 4] - HEAP[addr + 8];
-         *  }
          */
         inst<INST_NEW>(memory);
         inst_i32(memory, 12);
         // [heap_index:0]
 
         inst<INST_DUP>(memory);
+        inst_i32(memory, 0);
         // [heap_index:0, heap_index:0]
 
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 30); // instruction address of `f`
+        inst_i32(memory, 34); // instruction address of `f`
         // [heap_index:0, heap_index:0, f:?]
 
         inst<INST_SV32>(memory);
@@ -362,33 +373,29 @@ static void test_4(Memory* memory) {
         // [heap_index:0]
 
         inst<INST_DUP>(memory);
-
+        inst_i32(memory, 0);
         inst<INST_PUSH>(memory);
         inst_i32(memory, -7);
-
         inst<INST_SV32>(memory);
         inst_i32(memory, 4);
 
         inst<INST_DUP>(memory);
-
+        inst_i32(memory, 0);
         inst<INST_PUSH>(memory);
         inst_i32(memory, 6);
-
         inst<INST_SV32>(memory);
         inst_i32(memory, 8);
-        // [heap_index:0]
-
-        inst<INST_DUP>(memory);
-        // [heap_index:0, heap_index:0]
 
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 27);
-        // [heap_index:0, heap_index:0, return_addr:?]
+        inst_i32(memory, 31);
+        // [heap_index:0, return_addr:?]
 
-        inst<INST_SWAP>(memory);
+        inst<INST_DUP>(memory);
+        inst_i32(memory, 1);
         // [heap_index:0, return_addr:?, heap_index:0]
 
         inst<INST_DUP>(memory);
+        inst_i32(memory, 0);
         // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
 
         inst<INST_RD32>(memory);
@@ -401,30 +408,48 @@ static void test_4(Memory* memory) {
         inst<INST_JNZ>(memory); // f(heap_index)
         // [heap_index:0, return_addr:?, heap_index:0]
 
-        inst<INST_SWAP>(memory); // return address - 27
-        inst<INST_DROP>(memory);
+        inst<INST_STO>(memory);
+        inst_i32(memory, 0);
+
         inst<INST_HALT>(memory);
 
-        inst<INST_DUP>(memory); // f - 30
-        // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
+        /*  i32 f(i32 addr) {
+         *      return HEAP[addr + 4] - HEAP[addr + 8];
+         *  }
+         */
+        inst<INST_DUP>(memory);
+        inst_i32(memory, 0);
+        // [..., return_addr:?, heap_index:0, heap_index:0]
 
         inst<INST_RD32>(memory);
         inst_i32(memory, 4);
+        // [..., return_addr:?, heap_index:0, HEAP[addr + 4]]
 
-        inst<INST_SWAP>(memory);
+        inst<INST_DUP>(memory);
+        inst_i32(memory, 1);
+        // [..., return_addr:?, heap_index:0, HEAP[addr + 4], heap_index:0]
 
         inst<INST_RD32>(memory);
         inst_i32(memory, 8);
+        // [..., return_addr:?, heap_index:0, HEAP[addr + 4], HEAP[addr + 8]]
 
         inst<INST_SUB>(memory);
+        // [..., return_addr:?, heap_index:0, HEAP[addr + 4]-HEAP[addr + 8]]
+
+        inst<INST_STO>(memory);
+        inst_i32(memory, 0);
+        // [..., return_addr:?, HEAP[addr + 4]-HEAP[addr + 8]]
+
         inst<INST_SWAP>(memory);
+        // [..., HEAP[addr + 4]-HEAP[addr + 8], return_addr:?]
 
         inst<INST_PUSH>(memory);
         inst_i32(memory, 1);
 
         inst<INST_JNZ>(memory);
+        // [..., HEAP[addr + 4]-HEAP[addr + 8]]
     }
-    TEST(memory, 41, -13, 12);
+    TEST(memory, 49, -13, 12);
 }
 
 i32 main() {
