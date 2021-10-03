@@ -29,16 +29,21 @@ struct Stack {
 
 enum InstTag {
     INST_HALT = 0,
+
+    INST_PUSH,
+
     INST_DUP,
     INST_STO,
     INST_DROP,
-    INST_PUSH,
-    INST_SUB,
-    INST_JNZ,
     INST_SWAP,
+
+    INST_JNZ,
+
     INST_NEW,
     INST_SV32,
     INST_RD32,
+
+    INST_SUB,
 };
 
 union Inst {
@@ -132,6 +137,10 @@ static void run(Vm* vm) {
         case INST_HALT: {
             return;
         }
+        case INST_PUSH: {
+            alloc(&vm->nodes)->as_i32 = get(&vm->insts, i++).as_i32;
+            break;
+        }
         case INST_DUP: {
             alloc(&vm->nodes)->as_i32 =
                 get(&vm->nodes,
@@ -152,14 +161,11 @@ static void run(Vm* vm) {
             vm->nodes.len -= static_cast<u32>(get(&vm->insts, i++).as_i32);
             break;
         }
-        case INST_PUSH: {
-            alloc(&vm->nodes)->as_i32 = get(&vm->insts, i++).as_i32;
-            break;
-        }
-        case INST_SUB: {
+        case INST_SWAP: {
             const i32 r = pop(&vm->nodes).as_i32;
             const i32 l = pop(&vm->nodes).as_i32;
-            alloc(&vm->nodes)->as_i32 = l - r;
+            alloc(&vm->nodes)->as_i32 = r;
+            alloc(&vm->nodes)->as_i32 = l;
             break;
         }
         case INST_JNZ: {
@@ -168,13 +174,6 @@ static void run(Vm* vm) {
             if (jump) {
                 i = static_cast<u32>(insts_index);
             }
-            break;
-        }
-        case INST_SWAP: {
-            const i32 r = pop(&vm->nodes).as_i32;
-            const i32 l = pop(&vm->nodes).as_i32;
-            alloc(&vm->nodes)->as_i32 = r;
-            alloc(&vm->nodes)->as_i32 = l;
             break;
         }
         case INST_NEW: {
@@ -198,6 +197,12 @@ static void run(Vm* vm) {
             const i32 offset = get(&vm->insts, i++).as_i32;
             alloc(&vm->nodes)->as_i32 = *reinterpret_cast<i32*>(
                 get_pointer(&vm->heap, static_cast<u32>(heap_index + offset)));
+            break;
+        }
+        case INST_SUB: {
+            const i32 r = pop(&vm->nodes).as_i32;
+            const i32 l = pop(&vm->nodes).as_i32;
+            alloc(&vm->nodes)->as_i32 = l - r;
             break;
         }
         default: {
