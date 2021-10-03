@@ -15,9 +15,11 @@ typedef ssize_t isize;
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
-#define CAP_INSTS (1 << 6)
-#define CAP_NODES (1 << 5)
-#define CAP_HEAP  (1 << 5)
+#define CAP_INSTS      (1 << 6)
+#define CAP_NODES      (1 << 5)
+#define CAP_HEAP       (1 << 5)
+#define CAP_LABELS     (1 << 3)
+#define CAP_UNRESOLVED (1 << 3)
 
 template <typename T, u32 N>
 struct Stack {
@@ -48,10 +50,17 @@ union Node {
     i32 as_i32;
 };
 
+struct Unresolved {
+    Inst* inst;
+    u32*  label;
+};
+
 struct Memory {
-    Stack<Inst, CAP_INSTS> insts;
-    Stack<Node, CAP_NODES> nodes;
-    Stack<u8, CAP_HEAP>    heap;
+    Stack<Inst, CAP_INSTS>            insts;
+    Stack<Node, CAP_NODES>            nodes;
+    Stack<u8, CAP_HEAP>               heap;
+    Stack<u32, CAP_LABELS>            labels;
+    Stack<Unresolved, CAP_UNRESOLVED> unresolved;
 };
 
 #define EXIT()                                                       \
@@ -113,6 +122,10 @@ static T pop(Stack<T, N>* stack) {
 }
 
 static void run(Memory* memory) {
+    for (u32 i = 0; i < memory->unresolved.len; ++i) {
+        Unresolved unresolved = memory->unresolved.items[i];
+        unresolved.inst->as_i32 = static_cast<i32>(*unresolved.label);
+    }
     for (u32 i = 0;;) {
         const Inst inst = get(&memory->insts, i++);
         switch (inst.as_tag) {
@@ -207,6 +220,18 @@ static void inst_i32(Memory* memory, i32 x) {
     inst->as_i32 = x;
 }
 
+static void inst_label(Memory* memory, u32 label_index) {
+    EXIT_IF(CAP_LABELS <= label_index);
+    Unresolved* unresolved = alloc(&memory->unresolved);
+    unresolved->inst = alloc(&memory->insts);
+    unresolved->label = &memory->labels.items[label_index];
+}
+
+static void set_label(Memory* memory, u32 label_index) {
+    EXIT_IF(CAP_LABELS <= label_index);
+    memory->labels.items[label_index] = memory->insts.len;
+}
+
 static void* alloc(usize size) {
     void* memory = mmap(null,
                         size,
@@ -222,6 +247,8 @@ static void reset(Memory* memory) {
     memory->insts.len = 0;
     memory->nodes.len = 0;
     memory->heap.len = 0;
+    memory->labels.len = 0;
+    memory->unresolved.len = 0;
 }
 
 #define TEST(memory, insts_len, node_i32, heap_len)      \
@@ -242,18 +269,20 @@ static void test_0(Memory* memory) {
          *  }
          */
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 7);
+        inst_label(memory, 0);
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 8);
+        inst_label(memory, 1);
         inst<INST_PUSH>(memory);
         inst_i32(memory, 1);
         inst<INST_JNZ>(memory);
+        set_label(memory, 0);
         inst<INST_HALT>(memory);
 
         /*  i32 f() {
          *      return -5 - 7;
          *  }
          */
+        set_label(memory, 1);
         inst<INST_PUSH>(memory);
         inst_i32(memory, -5);
         inst<INST_PUSH>(memory);
@@ -271,13 +300,15 @@ static void test_1(Memory* memory) {
     reset(memory);
     {
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 7);
+        inst_label(memory, 0);
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 8);
+        inst_label(memory, 1);
         inst<INST_PUSH>(memory);
         inst_i32(memory, 0);
         inst<INST_JNZ>(memory);
+        set_label(memory, 0);
         inst<INST_HALT>(memory);
+        set_label(memory, 1);
     }
     TEST(memory, 8, 7, 0);
 }
@@ -365,7 +396,7 @@ static void test_4(Memory* memory) {
         // [heap_index:0, heap_index:0]
 
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 34); // instruction address of `f`
+        inst_label(memory, 0); // instruction address of `f`
         // [heap_index:0, heap_index:0, f:?]
 
         inst<INST_SV32>(memory);
@@ -387,7 +418,7 @@ static void test_4(Memory* memory) {
         inst_i32(memory, 8);
 
         inst<INST_PUSH>(memory);
-        inst_i32(memory, 31);
+        inst_label(memory, 1);
         // [heap_index:0, return_addr:?]
 
         inst<INST_DUP>(memory);
@@ -408,6 +439,7 @@ static void test_4(Memory* memory) {
         inst<INST_JNZ>(memory); // f(heap_index)
         // [heap_index:0, return_addr:?, heap_index:0]
 
+        set_label(memory, 1);
         inst<INST_STO>(memory);
         inst_i32(memory, 0);
 
@@ -417,6 +449,7 @@ static void test_4(Memory* memory) {
          *      return HEAP[addr + 4] - HEAP[addr + 8];
          *  }
          */
+        set_label(memory, 0);
         inst<INST_DUP>(memory);
         inst_i32(memory, 0);
         // [..., return_addr:?, heap_index:0, heap_index:0]
@@ -454,12 +487,14 @@ static void test_4(Memory* memory) {
 
 i32 main() {
     printf("\n"
-           "sizeof(Inst)     : %zu\n"
-           "sizeof(Node)     : %zu\n"
-           "sizeof(Memory)   : %zu\n"
+           "sizeof(Inst)       : %zu\n"
+           "sizeof(Node)       : %zu\n"
+           "sizeof(Unresolved) : %zu\n"
+           "sizeof(Memory)     : %zu\n"
            "\n",
            sizeof(Inst),
            sizeof(Node),
+           sizeof(Unresolved),
            sizeof(Memory));
     Memory* memory = reinterpret_cast<Memory*>(alloc(sizeof(Memory)));
     test_0(memory);
