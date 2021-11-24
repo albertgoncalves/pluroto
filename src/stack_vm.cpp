@@ -33,7 +33,7 @@ enum InstTag {
     INST_PUSH,
 
     INST_DUP,
-    INST_STO,
+    INST_STORE,
     INST_DROP,
     INST_SWAP,
 
@@ -149,7 +149,7 @@ static void run(Vm* vm) {
                     .as_i32;
             break;
         }
-        case INST_STO: {
+        case INST_STORE: {
             const i32 x = pop(&vm->nodes).as_i32;
             const i32 offset = get(&vm->insts, i++).as_i32;
             get_pointer(&vm->nodes,
@@ -443,7 +443,7 @@ static void test_4(Vm* vm) {
         // [heap_index:0, return_addr:?, heap_index:0]
 
         set_label(vm, 1);
-        inst<INST_STO>(vm);
+        inst<INST_STORE>(vm);
         inst_i32(vm, 0);
 
         inst<INST_HALT>(vm);
@@ -472,7 +472,7 @@ static void test_4(Vm* vm) {
         inst<INST_SUB>(vm);
         // [..., return_addr:?, heap_index:0, HEAP[addr + 4]-HEAP[addr + 8]]
 
-        inst<INST_STO>(vm);
+        inst<INST_STORE>(vm);
         inst_i32(vm, 0);
         // [..., return_addr:?, HEAP[addr + 4]-HEAP[addr + 8]]
 
