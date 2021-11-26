@@ -186,10 +186,9 @@ static void run(Vm* vm) {
             const i32 x = pop(&vm->nodes).as_i32;
             const i32 heap_index = pop(&vm->nodes).as_i32;
             const i32 offset = get(&vm->insts, i++).as_i32;
-            // NOTE: Bounds check?
-            i32* bytes =
-                reinterpret_cast<i32*>(&vm->heap.items[heap_index + offset]);
-            *bytes = x;
+            *reinterpret_cast<i32*>(
+                get_pointer(&vm->heap,
+                            static_cast<u32>(heap_index + offset))) = x;
             break;
         }
         case INST_RD32: {
