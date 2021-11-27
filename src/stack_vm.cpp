@@ -32,12 +32,13 @@ enum InstTag {
 
     INST_PUSH,
 
-    INST_DUP,
+    INST_COPY,
     INST_STORE,
     INST_DROP,
     INST_SWAP,
 
-    INST_JNZ,
+    INST_JUMP,
+    INST_JIFZ,
 
     INST_NEW,
     INST_SV32,
@@ -141,7 +142,7 @@ static void run(Vm* vm) {
             alloc(&vm->nodes)->as_i32 = get(&vm->insts, i++).as_i32;
             break;
         }
-        case INST_DUP: {
+        case INST_COPY: {
             alloc(&vm->nodes)->as_i32 =
                 get(&vm->nodes,
                     (vm->nodes.len - 1) -
@@ -168,10 +169,14 @@ static void run(Vm* vm) {
             alloc(&vm->nodes)->as_i32 = l;
             break;
         }
-        case INST_JNZ: {
-            const i32 jump = pop(&vm->nodes).as_i32;
+        case INST_JUMP: {
+            i = static_cast<u32>(pop(&vm->nodes).as_i32);
+            break;
+        }
+        case INST_JIFZ: {
+            const i32 x = pop(&vm->nodes).as_i32;
             const i32 insts_index = pop(&vm->nodes).as_i32;
-            if (jump) {
+            if (x == 0) {
                 i = static_cast<u32>(insts_index);
             }
             break;
@@ -270,19 +275,30 @@ static void test_0(Vm* vm) {
          *      return f();
          *  }
          */
+        /*      push `0`
+         *      push `1`
+         *      jump
+         *  `0`:
+         *      halt
+         */
         inst<INST_PUSH>(vm);
         inst_label(vm, 0);
         inst<INST_PUSH>(vm);
         inst_label(vm, 1);
-        inst<INST_PUSH>(vm);
-        inst_i32(vm, 1);
-        inst<INST_JNZ>(vm);
+        inst<INST_JUMP>(vm);
         set_label(vm, 0);
         inst<INST_HALT>(vm);
 
         /*  i32 f() {
          *      return -5 - 7;
          *  }
+         */
+        /*  `1`:
+         *      push -5
+         *      push 7
+         *      sub
+         *      swap
+         *      jump
          */
         set_label(vm, 1);
         inst<INST_PUSH>(vm);
@@ -291,28 +307,37 @@ static void test_0(Vm* vm) {
         inst_i32(vm, 7);
         inst<INST_SUB>(vm);
         inst<INST_SWAP>(vm);
-        inst<INST_PUSH>(vm);
-        inst_i32(vm, 1);
-        inst<INST_JNZ>(vm);
+        inst<INST_JUMP>(vm);
     }
-    TEST(vm, 17, -12, 0);
+    TEST(vm, 13, -12, 0);
 }
 
 static void test_1(Vm* vm) {
     reset(vm);
     {
+        /*      push `0`
+         *      push `1`
+         *      push 0
+         *      jnz
+         *  `0`:
+         *      halt
+         *  `1`:
+         *      push -1
+         */
         inst<INST_PUSH>(vm);
         inst_label(vm, 0);
         inst<INST_PUSH>(vm);
         inst_label(vm, 1);
         inst<INST_PUSH>(vm);
-        inst_i32(vm, 0);
-        inst<INST_JNZ>(vm);
+        inst_i32(vm, 1);
+        inst<INST_JIFZ>(vm);
         set_label(vm, 0);
         inst<INST_HALT>(vm);
         set_label(vm, 1);
+        inst<INST_PUSH>(vm);
+        inst_i32(vm, -1);
     }
-    TEST(vm, 8, 7, 0);
+    TEST(vm, 10, 7, 0);
 }
 
 static void test_2(Vm* vm) {
@@ -323,6 +348,11 @@ static void test_2(Vm* vm) {
          *      i32 addr = new(4);
          *      return addr;
          *  }
+         */
+        /*      new 4
+         *      drop 1
+         *      new 4
+         *      halt
          */
         inst<INST_NEW>(vm);
         inst_i32(vm, 4);
@@ -345,9 +375,18 @@ static void test_3(Vm* vm) {
          *      return *(&HEAP[addr + 4] as i32*);
          *  }
          */
+        /*      new 8
+         *      drop 1
+         *      new 12
+         *      copy 0
+         *      push -123
+         *      sv32 4
+         *      rd32 4
+         *      halt
+         */
         inst<INST_NEW>(vm);
         inst_i32(vm, 8);
-        // [heap_index:0]
+        // [addr:0]
 
         inst<INST_DROP>(vm);
         inst_i32(vm, 1);
@@ -355,23 +394,23 @@ static void test_3(Vm* vm) {
 
         inst<INST_NEW>(vm);
         inst_i32(vm, 12);
-        // [heap_index:8]
+        // [addr:8]
+
+        inst<INST_COPY>(vm);
+        inst_i32(vm, 0);
+        // [addr:8, addr:8]
 
         inst<INST_PUSH>(vm);
         inst_i32(vm, -123);
-        // [heap_index:0, x:-123]
+        // [addr:8, addr:8, -123]
 
         inst<INST_SV32>(vm);
         inst_i32(vm, 4);
-        // []
-
-        inst<INST_PUSH>(vm);
-        inst_i32(vm, 8);
-        // [heap_index:8]
+        // [addr:8]
 
         inst<INST_RD32>(vm);
         inst_i32(vm, 4);
-        // [x:?]
+        // [?]
 
         inst<INST_HALT>(vm);
     }
@@ -389,30 +428,53 @@ static void test_4(Vm* vm) {
          *      return HEAP[addr + 0](addr);
          *  }
          */
+        /*      new 12
+         *
+         *      copy 0
+         *      push `0`
+         *      sv32 0
+         *
+         *      copy 0
+         *      push -7
+         *      sv32 4
+         *
+         *      copy 0
+         *      push 6
+         *      sv32 8
+         *
+         *      push `1`
+         *      copy 1
+         *      copy 2
+         *      rd32 0
+         *      jump
+         *  `1`:
+         *      store 0
+         *      halt
+         */
         inst<INST_NEW>(vm);
         inst_i32(vm, 12);
-        // [heap_index:0]
+        // [addr:0]
 
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 0);
-        // [heap_index:0, heap_index:0]
+        // [addr:0, addr:0]
 
         inst<INST_PUSH>(vm);
-        inst_label(vm, 0); // instruction address of `f`
-        // [heap_index:0, heap_index:0, f:?]
+        inst_label(vm, 0);
+        // [addr:0, addr:0, f]
 
         inst<INST_SV32>(vm);
         inst_i32(vm, 0);
-        // [heap_index:0]
+        // [addr:0]
 
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 0);
         inst<INST_PUSH>(vm);
         inst_i32(vm, -7);
         inst<INST_SV32>(vm);
         inst_i32(vm, 4);
 
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 0);
         inst<INST_PUSH>(vm);
         inst_i32(vm, 6);
@@ -421,25 +483,22 @@ static void test_4(Vm* vm) {
 
         inst<INST_PUSH>(vm);
         inst_label(vm, 1);
-        // [heap_index:0, return_addr:?]
+        // [addr:0, return]
 
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 1);
-        // [heap_index:0, return_addr:?, heap_index:0]
+        // [addr:0, return, addr:0]
 
-        inst<INST_DUP>(vm);
-        inst_i32(vm, 0);
-        // [heap_index:0, return_addr:?, heap_index:0, heap_index:0]
+        inst<INST_COPY>(vm);
+        inst_i32(vm, 2);
+        // [addr:0, return, addr:0, addr:0]
 
         inst<INST_RD32>(vm);
         inst_i32(vm, 0); // instruction address of `f`
-        // [heap_index:0, return_addr:?, heap_index:0, f:?]
+        // [addr:0, return, addr:0, f]
 
-        inst<INST_PUSH>(vm);
-        inst_i32(vm, 1);
-
-        inst<INST_JNZ>(vm); // f(heap_index)
-        // [heap_index:0, return_addr:?, heap_index:0]
+        inst<INST_JUMP>(vm); // f(addr)
+        // [addr:0, return, addr:0]
 
         set_label(vm, 1);
         inst<INST_STORE>(vm);
@@ -451,40 +510,47 @@ static void test_4(Vm* vm) {
          *      return HEAP[addr + 4] - HEAP[addr + 8];
          *  }
          */
+        /*  `0`:
+         *      copy 0
+         *      rd32 4
+         *      copy 1
+         *      rd32 8
+         *      sub
+         *      store 0
+         *      swap
+         *      jump
+         */
         set_label(vm, 0);
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 0);
-        // [..., return_addr:?, heap_index:0, heap_index:0]
+        // [..., return, addr, addr]
 
         inst<INST_RD32>(vm);
         inst_i32(vm, 4);
-        // [..., return_addr:?, heap_index:0, HEAP[addr + 4]]
+        // [..., return, addr, HEAP[addr + 4]]
 
-        inst<INST_DUP>(vm);
+        inst<INST_COPY>(vm);
         inst_i32(vm, 1);
-        // [..., return_addr:?, heap_index:0, HEAP[addr + 4], heap_index:0]
+        // [..., return, addr, HEAP[addr + 4], addr]
 
         inst<INST_RD32>(vm);
         inst_i32(vm, 8);
-        // [..., return_addr:?, heap_index:0, HEAP[addr + 4], HEAP[addr + 8]]
+        // [..., return, addr, HEAP[addr + 4], HEAP[addr + 8]]
 
         inst<INST_SUB>(vm);
-        // [..., return_addr:?, heap_index:0, HEAP[addr + 4]-HEAP[addr + 8]]
+        // [..., return, addr, HEAP[addr + 4]-HEAP[addr + 8]]
 
         inst<INST_STORE>(vm);
         inst_i32(vm, 0);
-        // [..., return_addr:?, HEAP[addr + 4]-HEAP[addr + 8]]
+        // [..., return, HEAP[addr + 4]-HEAP[addr + 8]]
 
         inst<INST_SWAP>(vm);
-        // [..., HEAP[addr + 4]-HEAP[addr + 8], return_addr:?]
+        // [..., HEAP[addr + 4]-HEAP[addr + 8], return]
 
-        inst<INST_PUSH>(vm);
-        inst_i32(vm, 1);
-
-        inst<INST_JNZ>(vm);
+        inst<INST_JUMP>(vm);
         // [..., HEAP[addr + 4]-HEAP[addr + 8]]
     }
-    TEST(vm, 49, -13, 12);
+    TEST(vm, 45, -13, 12);
 }
 
 i32 main() {
