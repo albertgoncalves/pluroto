@@ -16,7 +16,6 @@ export flags=(
     "-fsanitize=address"
     "-fsanitize=undefined"
     "-fshort-enums"
-    "-fuse-ld=lld"
     "-march=native"
     "-O1"
     "-std=c++11"
@@ -33,7 +32,7 @@ export flags=(
 runc () {
     handle=$(echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/')
     clang-format -i -verbose "$1" || return
-    clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
+    mold -run clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
     "$WD/bin/${handle}"
 }
 
