@@ -12,14 +12,16 @@ typedef int32_t i32;
 // NOTE: See `https://softwareengineering.stackexchange.com/questions/49550/which-hashing-algorithm-is-best-for-uniqueness-and-speed`.
 // NOTE: See `https://en.wikipedia.org/wiki/MurmurHash`.
 
-static u32 get_scramble(u32 k) {
+__attribute__((no_sanitize("integer"))) static u32 get_scramble(u32 k) {
     k *= 0xCC9E2D51;
     k = (k << 15) | (k >> 17);
     k *= 0x1B873593;
     return k;
 }
 
-static u32 get_murmur3(const u8* key, u32 len, u32 seed) {
+__attribute__((no_sanitize("integer"))) static u32 get_murmur3(const u8* key,
+                                                               u32       len,
+                                                               u32 seed) {
     u32 h = seed;
     u32 k;
     u32 n = (len / sizeof(u32)) * sizeof(u32);

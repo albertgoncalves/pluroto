@@ -24,7 +24,8 @@ typedef int32_t i32;
 #define FNV_32_PRIME        16777619
 #define FNV_32_OFFSET_BASIS 2166136261
 
-static u32 fnv_1a_32(const u8* bytes, u32 len) {
+__attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes,
+                                                             u32       len) {
     u32 hash = FNV_32_OFFSET_BASIS;
     for (u32 i = 0; i < len; ++i) {
         hash ^= bytes[i];
