@@ -8,4 +8,5 @@ mkShell.override { stdenv = llvmPackages_14.stdenv; } {
     shellHook = ''
         . .shellhook
     '';
+    hardeningDisable = [ "all" ];
 }
