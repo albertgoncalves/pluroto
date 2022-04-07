@@ -70,20 +70,6 @@ static void init(Memory<K, V>* memory) {
 }
 
 template <typename K, typename V>
-bool find(Node<K, V>*, Node<K, V>*);
-
-template <typename K, typename V>
-bool find(Node<K, V>* node, Node<K, V>* pointer) {
-    if (!node) {
-        return false;
-    }
-    if (node == pointer) {
-        return true;
-    }
-    return find(node->left, pointer) || find(node->right, pointer);
-}
-
-template <typename K, typename V>
 static Node<K, V>* alloc(Memory<K, V>* memory, K key, V value) {
     EXIT_IF(memory->len_slots == 0);
     Node<K, V>* node = memory->slots[--memory->len_slots];
@@ -166,10 +152,10 @@ static Node<K, V>* balance(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-Node<K, V>* insert(Memory<K, V>*, Node<K, V>*, K, V);
-
-template <typename K, typename V>
-Node<K, V>* insert(Memory<K, V>* memory, Node<K, V>* node, K key, V value) {
+static Node<K, V>* insert(Memory<K, V>* memory,
+                          Node<K, V>*   node,
+                          K             key,
+                          V             value) {
     if (!node) {
         return alloc(memory, key, value);
     }
@@ -215,10 +201,7 @@ static Node<K, V>* move_red_right(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-Node<K, V>* drop_min(Memory<K, V>*, Node<K, V>*);
-
-template <typename K, typename V>
-Node<K, V>* drop_min(Memory<K, V>* memory, Node<K, V>* node) {
+static Node<K, V>* drop_min(Memory<K, V>* memory, Node<K, V>* node) {
     if (!node) {
         return null;
     }
@@ -235,9 +218,6 @@ Node<K, V>* drop_min(Memory<K, V>* memory, Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-static Node<K, V>* find_min(Node<K, V>*);
-
-template <typename K, typename V>
 static Node<K, V>* find_min(Node<K, V>* node) {
     if (!node->left) {
         return node;
@@ -246,10 +226,7 @@ static Node<K, V>* find_min(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-Node<K, V>* drop(Memory<K, V>*, Node<K, V>*, K);
-
-template <typename K, typename V>
-Node<K, V>* drop(Memory<K, V>* memory, Node<K, V>* node, K key) {
+static Node<K, V>* drop(Memory<K, V>* memory, Node<K, V>* node, K key) {
     if (!node) {
         return null;
     }

@@ -25,8 +25,7 @@ typedef int32_t i32;
 
 static u64 MEMO[N][N];
 
-u64 _bell_rec_memo(u64, u64);
-u64 _bell_rec_memo(u64 i, u64 j) {
+static u64 _bell_rec_memo(u64 i, u64 j) {
     if (MEMO[i][j] != 0) {
         return MEMO[i][j];
     }
