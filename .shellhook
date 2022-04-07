@@ -10,25 +10,31 @@ done
 
 export flags=(
     "-ferror-limit=1"
-    "-fno-exceptions"
-    "-fno-math-errno"
-    "-fno-omit-frame-pointer"
-    "-fno-rtti"
-    "-fno-unwind-tables"
+    -fno-exceptions
+    -fno-math-errno
+    -fno-omit-frame-pointer
+    -fno-rtti
+    -fno-unwind-tables
     "-fsanitize=address"
+    "-fsanitize=bounds"
+    "-fsanitize=float-divide-by-zero"
+    "-fsanitize=implicit-conversion"
+    "-fsanitize=integer"
+    "-fsanitize=nullability"
     "-fsanitize=undefined"
-    "-fshort-enums"
+    -fshort-enums
     "-march=native"
-    "-O1"
+    -O1
     "-std=c++11"
-    "-Werror"
-    "-Weverything"
-    "-Wno-c++98-compat"
-    "-Wno-c++98-compat-pedantic"
-    "-Wno-c99-extensions"
-    "-Wno-covered-switch-default"
-    "-Wno-extra-semi-stmt"
-    "-Wno-padded"
+    -Werror
+    -Weverything
+    -Wno-c++98-compat
+    -Wno-c++98-compat-pedantic
+    -Wno-c99-extensions
+    -Wno-covered-switch-default
+    -Wno-extra-semi-stmt
+    -Wno-padded
+    -Wno-reserved-identifier
 )
 
 runc () {
