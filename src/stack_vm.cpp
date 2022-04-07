@@ -44,6 +44,9 @@ enum InstTag {
     INST_SV32,
     INST_RD32,
 
+    INST_GT,
+
+    INST_ADD,
     INST_SUB,
 };
 
@@ -201,6 +204,18 @@ static void run(Vm* vm) {
             const i32 offset = get(&vm->insts, i++).as_i32;
             alloc(&vm->nodes)->as_i32 = *reinterpret_cast<i32*>(
                 get_pointer(&vm->heap, static_cast<u32>(heap_index + offset)));
+            break;
+        }
+        case INST_GT: {
+            const i32 r = pop(&vm->nodes).as_i32;
+            const i32 l = pop(&vm->nodes).as_i32;
+            alloc(&vm->nodes)->as_i32 = l > r ? 1 : 0;
+            break;
+        }
+        case INST_ADD: {
+            const i32 r = pop(&vm->nodes).as_i32;
+            const i32 l = pop(&vm->nodes).as_i32;
+            alloc(&vm->nodes)->as_i32 = l + r;
             break;
         }
         case INST_SUB: {
