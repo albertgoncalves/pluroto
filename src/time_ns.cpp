@@ -27,8 +27,8 @@ typedef struct timespec Time;
 static u64 get_time_monotonic() {
     Time time;
     EXIT_IF(clock_gettime(CLOCK_MONOTONIC, &time));
-    return (static_cast<u64>(time.tv_sec) * 1000000) +
-           (static_cast<u64>(time.tv_nsec) / 1000);
+    return (static_cast<u64>(time.tv_sec) * 1000000000) +
+           (static_cast<u64>(time.tv_nsec));
 }
 
 i32 main() {
