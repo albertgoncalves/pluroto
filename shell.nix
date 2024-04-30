@@ -1,7 +1,6 @@
 with import <nixpkgs> {};
-mkShell.override { stdenv = llvmPackages_14.stdenv; } {
+mkShell.override { stdenv = llvmPackages_16.stdenv; } {
     buildInputs = [
-        mold
         shellcheck
         valgrind
     ];

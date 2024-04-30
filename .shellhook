@@ -35,17 +35,15 @@ export flags=(
     -Wno-extra-semi-stmt
     -Wno-padded
     -Wno-reserved-identifier
+    -Wno-unsafe-buffer-usage
 )
 
 runc () {
-    handle=$(echo "$1" | sed 's/^[a-z\/]*\/\(.*\)\.[a-z]*$/\1/')
+    handle=$(basename "${1%%.*}")
+    args=("$@")
     clang-format -i -verbose "$1" || return
-    mold -run clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
-    if [ -z "$2" ]; then
-        "$WD/bin/${handle}"
-    else
-        "$WD/bin/${handle}" "$2"
-    fi
+    clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
+    "$WD/bin/${handle}" "${args[@]:1}"
 }
 
 export -f runc
