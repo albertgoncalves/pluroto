@@ -31,6 +31,7 @@ export flags=(
     -Wno-extra-semi-stmt
     -Wno-padded
     -Wno-reserved-identifier
+    -Wno-unreachable-code-return
     -Wno-unsafe-buffer-usage
 )
 

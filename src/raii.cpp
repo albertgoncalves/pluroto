@@ -1,24 +1,31 @@
-#include <stdint.h>
-#include <stdio.h>
-
-typedef int32_t i32;
-
-#define OK 0
+#include <exception>
+#include <iostream>
 
 template <typename T>
 struct MyStruct {
     T x;
     MyStruct(T t) : x(t) {
-        printf("Calling constructor\n");
+        std::cout << "Calling constructor\n";
     }
     ~MyStruct() {
-        printf("Calling destructor\n");
+        std::cout << "Calling destructor\n";
     }
     MyStruct(MyStruct const&) = default;
 };
 
-i32 main() {
-    auto my_struct = MyStruct<i32>(-123);
-    printf("%d\n", my_struct.x);
-    return OK;
+int main() {
+    auto my_struct = MyStruct<int>(-123);
+    std::cout << my_struct.x << '\n';
+
+    try {
+        auto _ = MyStruct<int>(456);
+        if (0 != 1) {
+            throw __LINE__;
+        }
+    } catch (int e) {
+        std::cout << __FILE__ << ":" << e << '\n';
+        return 1;
+    }
+
+    return 0;
 }
