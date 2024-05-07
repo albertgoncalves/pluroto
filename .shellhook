@@ -10,11 +10,7 @@ done
 
 export flags=(
     "-ferror-limit=1"
-    -fno-exceptions
     -fno-math-errno
-    -fno-omit-frame-pointer
-    -fno-rtti
-    -fno-unwind-tables
     "-fsanitize=address"
     "-fsanitize=bounds"
     "-fsanitize=float-divide-by-zero"
