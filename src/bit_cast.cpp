@@ -18,8 +18,7 @@ static i16 read_i16(const i8* array, i32 i) {
 
 static i32 read_i32(const i8* array, i32 i) {
     i32 j = i << 2;
-    return array[j] | (array[j + 1] << 8) | (array[j + 2] << 16) |
-           (array[j + 3] << 24);
+    return array[j] | (array[j + 1] << 8) | (array[j + 2] << 16) | (array[j + 3] << 24);
 }
 
 #endif
@@ -30,11 +29,7 @@ i32 main() {
         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
     };
     printf("%hhd\n%hhd\n", array[10], read_i8(array, 10));
-    printf("%hd\n%hd\n",
-           read_i16(array, 1),
-           *reinterpret_cast<i16*>(&array[1 << 1]));
-    printf("%d\n%d\n",
-           read_i32(array, 3),
-           *reinterpret_cast<i32*>(&array[3 << 2]));
+    printf("%hd\n%hd\n", read_i16(array, 1), *reinterpret_cast<i16*>(&array[1 << 1]));
+    printf("%d\n%d\n", read_i32(array, 3), *reinterpret_cast<i32*>(&array[3 << 2]));
     return EXIT_SUCCESS;
 }

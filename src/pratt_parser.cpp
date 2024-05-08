@@ -153,15 +153,10 @@ static const Token TOKENS[] = {
         _exit(EXIT_FAILURE);                                         \
     }
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        _exit(EXIT_FAILURE);         \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        _exit(EXIT_FAILURE);                                                            \
     }
 
 static void print(String string) {
@@ -335,32 +330,16 @@ static Node* parse(Memory* memory, u8 prev_binding) {
         }
         switch (token->tag) {
         case TOKEN_ADD: {
-            SET_BINOP(memory,
-                      left_node,
-                      OP_ADD,
-                      BINDING_INFIX_ADD_SUB_L,
-                      BINDING_INFIX_ADD_SUB_R);
+            SET_BINOP(memory, left_node, OP_ADD, BINDING_INFIX_ADD_SUB_L, BINDING_INFIX_ADD_SUB_R);
         }
         case TOKEN_SUB: {
-            SET_BINOP(memory,
-                      left_node,
-                      OP_SUB,
-                      BINDING_INFIX_ADD_SUB_L,
-                      BINDING_INFIX_ADD_SUB_R);
+            SET_BINOP(memory, left_node, OP_SUB, BINDING_INFIX_ADD_SUB_L, BINDING_INFIX_ADD_SUB_R);
         }
         case TOKEN_MUL: {
-            SET_BINOP(memory,
-                      left_node,
-                      OP_MUL,
-                      BINDING_INFIX_MUL_DIV_L,
-                      BINDING_INFIX_MUL_DIV_R);
+            SET_BINOP(memory, left_node, OP_MUL, BINDING_INFIX_MUL_DIV_L, BINDING_INFIX_MUL_DIV_R);
         }
         case TOKEN_DIV: {
-            SET_BINOP(memory,
-                      left_node,
-                      OP_DIV,
-                      BINDING_INFIX_MUL_DIV_L,
-                      BINDING_INFIX_MUL_DIV_R);
+            SET_BINOP(memory, left_node, OP_DIV, BINDING_INFIX_MUL_DIV_L, BINDING_INFIX_MUL_DIV_R);
         }
         case TOKEN_LPAREN: {
             if (BINDING_CALL_LPAREN < prev_binding) {
@@ -505,12 +484,7 @@ static void println(const Node* node, u8 n) {
 }
 
 static void* alloc(usize size) {
-    void* memory = mmap(null,
-                        size,
-                        PROT_READ | PROT_WRITE,
-                        MAP_ANONYMOUS | MAP_PRIVATE,
-                        -1,
-                        0);
+    void* memory = mmap(null, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     EXIT_IF(memory == MAP_FAILED);
     return memory;
 }

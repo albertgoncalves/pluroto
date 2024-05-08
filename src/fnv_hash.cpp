@@ -10,22 +10,16 @@ typedef uint32_t u32;
 
 typedef int32_t i32;
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        exit(EXIT_FAILURE);          \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        exit(EXIT_FAILURE);                                                             \
     }
 
 #define FNV_32_PRIME        16777619
 #define FNV_32_OFFSET_BASIS 2166136261
 
-__attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes,
-                                                             u32       len) {
+__attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes, u32 len) {
     u32 hash = FNV_32_OFFSET_BASIS;
     for (u32 i = 0; i < len; ++i) {
         hash ^= bytes[i];
@@ -34,8 +28,7 @@ __attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes,
     return hash;
 }
 
-#define FNV_1A_32(literal) \
-    fnv_1a_32(reinterpret_cast<const u8*>(literal), sizeof(literal) - 1)
+#define FNV_1A_32(literal) fnv_1a_32(reinterpret_cast<const u8*>(literal), sizeof(literal) - 1)
 
 i32 main() {
     // NOTE: See `https://github.com/sindresorhus/fnv1a`.

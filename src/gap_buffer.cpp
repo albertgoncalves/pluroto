@@ -19,15 +19,10 @@ struct Memory {
     u32   post_end;
 };
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        exit(EXIT_FAILURE);          \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        exit(EXIT_FAILURE);                                                             \
     }
 
 #define GAP_WIDTH (1 << 3)
@@ -52,9 +47,7 @@ static void grow(Memory* memory) {
         from = 1;
     }
     memcpy(&memory->swap[to][0], &memory->swap[from][0], memory->gap_start);
-    memcpy(&memory->swap[to][start],
-           &memory->swap[from][memory->post_start],
-           len);
+    memcpy(&memory->swap[to][start], &memory->swap[from][memory->post_start], len);
     memory->buffer = &memory->swap[to][0];
     memory->post_start = start;
     memory->post_end = end;

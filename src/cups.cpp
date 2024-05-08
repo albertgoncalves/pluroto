@@ -9,15 +9,10 @@ typedef uint64_t u64;
 
 typedef int32_t i32;
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        exit(EXIT_FAILURE);          \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        exit(EXIT_FAILURE);                                                             \
     }
 
 #define CAP 1000000
@@ -69,8 +64,7 @@ i32 main() {
                 }
             }
         }
-        EXIT_IF((static_cast<u64>(next[1]) *
-                 static_cast<u64>(next[next[1]])) != 170836011000);
+        EXIT_IF((static_cast<u64>(next[1]) * static_cast<u64>(next[next[1]])) != 170836011000);
     }
     free(memory);
     printf("All good!\n");

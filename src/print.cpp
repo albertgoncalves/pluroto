@@ -23,8 +23,7 @@ static char  BUFFER[CAP_BUFFER];
 static usize BUFFER_LEN = 0;
 
 static void flush() {
-    EXIT_IF(static_cast<isize>(BUFFER_LEN) !=
-            write(STDOUT, BUFFER, BUFFER_LEN));
+    EXIT_IF(static_cast<isize>(BUFFER_LEN) != write(STDOUT, BUFFER, BUFFER_LEN));
     BUFFER_LEN = 0;
 }
 

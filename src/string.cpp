@@ -30,8 +30,7 @@ struct String {
     }
 
 static void print(String string) {
-    EXIT_IF(static_cast<isize>(string.len) !=
-            write(STDOUT, string.chars, string.len));
+    EXIT_IF(static_cast<isize>(string.len) != write(STDOUT, string.chars, string.len));
 }
 
 i32 main() {

@@ -49,22 +49,16 @@ struct String {
         exit(EXIT_FAILURE);                                          \
     }
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        exit(EXIT_FAILURE);          \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        exit(EXIT_FAILURE);                                                             \
     }
 
 #define FNV_32_PRIME        16777619
 #define FNV_32_OFFSET_BASIS 2166136261
 
-__attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes,
-                                                             u32       len) {
+__attribute__((no_sanitize("integer"))) static u32 fnv_1a_32(const u8* bytes, u32 len) {
     u32 hash = FNV_32_OFFSET_BASIS;
     for (u32 i = 0; i < len; ++i) {
         hash ^= bytes[i];
@@ -176,8 +170,8 @@ i32 main() {
            sizeof(String),
            sizeof(Item<String, i32>),
            sizeof(Table<String, i32>));
-    Table<String, i32>* table = reinterpret_cast<Table<String, i32>*>(
-        calloc(1, sizeof(Table<String, i32>)));
+    Table<String, i32>* table =
+        reinterpret_cast<Table<String, i32>*>(calloc(1, sizeof(Table<String, i32>)));
     EXIT_IF(!table);
     insert(table, TO_STR("abd"), 2);
     insert(table, TO_STR("__?__"), 99);

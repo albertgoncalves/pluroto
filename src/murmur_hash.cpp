@@ -19,9 +19,7 @@ __attribute__((no_sanitize("integer"))) static u32 get_scramble(u32 k) {
     return k;
 }
 
-__attribute__((no_sanitize("integer"))) static u32 get_murmur3(const u8* key,
-                                                               u32       len,
-                                                               u32 seed) {
+__attribute__((no_sanitize("integer"))) static u32 get_murmur3(const u8* key, u32 len, u32 seed) {
     u32 h = seed;
     u32 k;
     u32 n = (len / sizeof(u32)) * sizeof(u32);
@@ -46,16 +44,12 @@ __attribute__((no_sanitize("integer"))) static u32 get_murmur3(const u8* key,
     return h;
 }
 
-#define GET_MURMUR3(literal, seed)                    \
-    get_murmur3(reinterpret_cast<const u8*>(literal), \
-                sizeof(literal) - 1,                  \
-                seed)
+#define GET_MURMUR3(literal, seed) \
+    get_murmur3(reinterpret_cast<const u8*>(literal), sizeof(literal) - 1, seed)
 
 #define SEED 1760947478
 
 i32 main() {
-    printf("%u\n%u\n",
-           GET_MURMUR3("1234", SEED),
-           GET_MURMUR3("foo bar baz", SEED));
+    printf("%u\n%u\n", GET_MURMUR3("1234", SEED), GET_MURMUR3("foo bar baz", SEED));
     return EXIT_SUCCESS;
 }

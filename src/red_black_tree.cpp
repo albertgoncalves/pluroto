@@ -21,15 +21,10 @@ typedef ssize_t isize;
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        _exit(EXIT_FAILURE);         \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        _exit(EXIT_FAILURE);                                                            \
     }
 
 #define RED   true
@@ -152,10 +147,7 @@ static Node<K, V>* balance(Node<K, V>* node) {
 }
 
 template <typename K, typename V>
-static Node<K, V>* insert(Memory<K, V>* memory,
-                          Node<K, V>*   node,
-                          K             key,
-                          V             value) {
+static Node<K, V>* insert(Memory<K, V>* memory, Node<K, V>* node, K key, V value) {
     if (!node) {
         return alloc(memory, key, value);
     }
@@ -244,8 +236,7 @@ static Node<K, V>* drop(Memory<K, V>* memory, Node<K, V>* node, K key) {
             memory->slots[memory->len_slots++] = node;
             return null;
         }
-        if (node->right && !is_red(node->right) && !is_red(node->right->left))
-        {
+        if (node->right && !is_red(node->right) && !is_red(node->right->left)) {
             node = move_red_right(node);
         }
         if (key == node->key) {
@@ -285,12 +276,7 @@ static void println(Node<K, V>* node, u8 n) {
 }
 
 static void* alloc(usize size) {
-    void* memory = mmap(null,
-                        size,
-                        PROT_READ | PROT_WRITE,
-                        MAP_ANONYMOUS | MAP_PRIVATE,
-                        -1,
-                        0);
+    void* memory = mmap(null, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     EXIT_IF(memory == MAP_FAILED);
     return memory;
 }
@@ -300,8 +286,7 @@ i32 main() {
            "sizeof(Memory<u8, char>) : %zu\n",
            sizeof(Node<u8, char>),
            sizeof(Memory<u8, char>));
-    Memory<u8, char>* memory =
-        reinterpret_cast<Memory<u8, char>*>(alloc(sizeof(Memory<u8, char>)));
+    Memory<u8, char>* memory = reinterpret_cast<Memory<u8, char>*>(alloc(sizeof(Memory<u8, char>)));
     {
         init(memory);
         for (u8 i = 0; i < 1; ++i) {

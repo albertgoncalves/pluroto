@@ -18,15 +18,10 @@ typedef ssize_t isize;
 
 #define null nullptr
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        _exit(EXIT_FAILURE);         \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        _exit(EXIT_FAILURE);                                                            \
     }
 
 template <typename T>
@@ -89,8 +84,7 @@ static T force(Lazy<T>* lazy) {
         return lazy->body.as_result;
     }
     lazy->cached = true;
-    lazy->body.as_result =
-        lazy->body.as_defer.func(lazy->body.as_defer.payload);
+    lazy->body.as_result = lazy->body.as_defer.func(lazy->body.as_defer.payload);
     return lazy->body.as_result;
 }
 
@@ -154,12 +148,7 @@ static List<T>* f2(void* payload) {
 }
 
 static void* alloc(usize size) {
-    void* memory = mmap(null,
-                        size,
-                        PROT_READ | PROT_WRITE,
-                        MAP_ANONYMOUS | MAP_PRIVATE,
-                        -1,
-                        0);
+    void* memory = mmap(null, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     EXIT_IF(memory == MAP_FAILED);
     return memory;
 }
@@ -178,8 +167,7 @@ i32 main() {
            sizeof(Lazy<List<i64>*>),
            sizeof(Args<i64>),
            sizeof(Memory<i64>));
-    Memory<i64>* memory =
-        reinterpret_cast<Memory<i64>*>(alloc(sizeof(Memory<i64>)));
+    Memory<i64>* memory = reinterpret_cast<Memory<i64>*>(alloc(sizeof(Memory<i64>)));
     {
         FIBS = alloc(&memory->lists);
         FIBS->value = 0;

@@ -79,16 +79,11 @@ struct Vm {
         _exit(EXIT_FAILURE);                                         \
     }
 
-#define EXIT_IF(condition)           \
-    if (condition) {                 \
-        fflush(stdout);              \
-        fprintf(stderr,              \
-                "%s:%s:%d \"%s\"\n", \
-                __FILE__,            \
-                __func__,            \
-                __LINE__,            \
-                #condition);         \
-        _exit(EXIT_FAILURE);         \
+#define EXIT_IF(condition)                                                              \
+    if (condition) {                                                                    \
+        fflush(stdout);                                                                 \
+        fprintf(stderr, "%s:%s:%d \"%s\"\n", __FILE__, __func__, __LINE__, #condition); \
+        _exit(EXIT_FAILURE);                                                            \
     }
 
 template <typename T, u32 N>
@@ -147,18 +142,14 @@ static void run(Vm* vm) {
         }
         case INST_COPY: {
             alloc(&vm->nodes)->as_i32 =
-                get(&vm->nodes,
-                    (vm->nodes.len - 1) -
-                        static_cast<u32>(get(&vm->insts, i++).as_i32))
+                get(&vm->nodes, (vm->nodes.len - 1) - static_cast<u32>(get(&vm->insts, i++).as_i32))
                     .as_i32;
             break;
         }
         case INST_STORE: {
             const i32 x = pop(&vm->nodes).as_i32;
             const i32 offset = get(&vm->insts, i++).as_i32;
-            get_pointer(&vm->nodes,
-                        (vm->nodes.len - 1) - static_cast<u32>(offset))
-                ->as_i32 = x;
+            get_pointer(&vm->nodes, (vm->nodes.len - 1) - static_cast<u32>(offset))->as_i32 = x;
             break;
         }
         case INST_DROP: {
@@ -186,17 +177,15 @@ static void run(Vm* vm) {
         }
         case INST_NEW: {
             alloc(&vm->nodes)->as_i32 = static_cast<i32>(
-                alloc_offset(&vm->heap,
-                             static_cast<u32>(get(&vm->insts, i++).as_i32)));
+                alloc_offset(&vm->heap, static_cast<u32>(get(&vm->insts, i++).as_i32)));
             break;
         }
         case INST_SV32: {
             const i32 x = pop(&vm->nodes).as_i32;
             const i32 heap_index = pop(&vm->nodes).as_i32;
             const i32 offset = get(&vm->insts, i++).as_i32;
-            *reinterpret_cast<i32*>(
-                get_pointer(&vm->heap,
-                            static_cast<u32>(heap_index + offset))) = x;
+            *reinterpret_cast<i32*>(get_pointer(&vm->heap, static_cast<u32>(heap_index + offset))) =
+                x;
             break;
         }
         case INST_RD32: {
@@ -255,12 +244,7 @@ static void set_label(Vm* vm, u32 label_index) {
 }
 
 static void* alloc(usize size) {
-    void* memory = mmap(null,
-                        size,
-                        PROT_READ | PROT_WRITE,
-                        MAP_ANONYMOUS | MAP_PRIVATE,
-                        -1,
-                        0);
+    void* memory = mmap(null, size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
     EXIT_IF(memory == MAP_FAILED);
     return memory;
 }
