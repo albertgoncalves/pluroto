@@ -19,6 +19,7 @@ export flags=(
     "-fsanitize=nullability"
     "-fsanitize=undefined"
     -fshort-enums
+    -ggdb
     "-march=native"
     -O1
     "-std=c++11"
@@ -40,7 +41,11 @@ runc () {
     args=("$@")
     clang-format -i -verbose "$1" || return
     clang++ "${flags[@]}" -o "$WD/bin/${handle}" "$1" || return
-    "$WD/bin/${handle}" "${args[@]:1}"
+
+    # NOTE: See `https://jvns.ca/blog/2018/04/28/debugging-a-segfault-on-linux/`.
+    ASAN_OPTIONS=abort_on_error=1:disable_coredump=0:unmap_shadow_on_exit=1 \
+        "$WD/bin/${handle}" "${args[@]:1}" \
+        || coredumpctl debug -A '-ex "thread apply all backtrace full" -ex q'
 }
 
 export -f runc

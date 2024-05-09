@@ -1,6 +1,7 @@
 with import <nixpkgs> {};
 mkShell.override { stdenv = llvmPackages_16.stdenv; } {
     buildInputs = [
+        gdb
         shellcheck
         valgrind
     ];
