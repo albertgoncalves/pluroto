@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 #include <iostream>
 
 static void f(int x) {
@@ -10,7 +11,9 @@ static void f(int x) {
 int main() {
     const int x = 2;
 
-    static const char* message = "Hello, world?";
+    char message[14] = {};
+    std::memcpy(message, "Hello, world?", 14);
+    message[12] = '!';
     std::cout << message << '\n';
 
     f(x);
