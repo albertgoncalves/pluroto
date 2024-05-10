@@ -10,15 +10,14 @@ struct MyStruct {
     ~MyStruct() {
         std::cout << "Calling destructor" << std::endl;
     }
-    MyStruct(MyStruct const&) = default;
 };
 
 int main() {
-    auto my_struct = MyStruct<int>(-123);
+    MyStruct<int> my_struct(-123);
     std::cout << my_struct.x << std::endl;
 
     try {
-        auto _ = MyStruct<int>(456);
+        MyStruct<int> _(456);
         if (0 != 1) {
             throw __LINE__;
         }
