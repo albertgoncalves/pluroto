@@ -20,5 +20,5 @@ int main() {
     vec.push_back(3456);
     vec[1] = -2;
 
-    std::cout << vec << '\n';
+    std::cout << vec << std::endl;
 }

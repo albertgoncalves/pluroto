@@ -14,7 +14,7 @@ int main() {
     char message[14] = {};
     std::memcpy(message, "Hello, world?", 14);
     message[12] = '!';
-    std::cout << message << '\n';
+    std::cout << message << std::endl;
 
     f(x);
 

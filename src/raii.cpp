@@ -5,17 +5,17 @@ template <typename T>
 struct MyStruct {
     T x;
     MyStruct(T t) : x(t) {
-        std::cout << "Calling constructor\n";
+        std::cout << "Calling constructor" << std::endl;
     }
     ~MyStruct() {
-        std::cout << "Calling destructor\n";
+        std::cout << "Calling destructor" << std::endl;
     }
     MyStruct(MyStruct const&) = default;
 };
 
 int main() {
     auto my_struct = MyStruct<int>(-123);
-    std::cout << my_struct.x << '\n';
+    std::cout << my_struct.x << std::endl;
 
     try {
         auto _ = MyStruct<int>(456);
@@ -23,7 +23,7 @@ int main() {
             throw __LINE__;
         }
     } catch (int e) {
-        std::cout << __FILE__ << ":" << e << '\n';
+        std::cout << __FILE__ << ":" << e << std::endl;
         return 1;
     }
 

@@ -34,7 +34,7 @@ int main() {
         return std::get<1>(l) < std::get<1>(r);
     });
 
-    std::cout << items << '\n';
+    std::cout << items << std::endl;
 
     return 0;
 }
