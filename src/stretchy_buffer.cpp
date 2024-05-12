@@ -16,7 +16,7 @@ struct Buffer {
         std::cout << " - constructing object" << std::endl;
     }
 
-    Buffer(Buffer&& buffer) = default;
+    Buffer(Buffer&&) = default;
 
     ~Buffer() {
         if (items != nullptr) {

@@ -1,5 +1,5 @@
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 
 typedef int32_t i32;
 
@@ -8,9 +8,9 @@ typedef int32_t i32;
 template <typename F>
 struct __Defer__ {
     F f;
-    __Defer__(__Defer__ const&) = default;
     __Defer__(F x) : f(x) {
     }
+    __Defer__(__Defer__&&) = default;
     ~__Defer__() {
         f();
     }
