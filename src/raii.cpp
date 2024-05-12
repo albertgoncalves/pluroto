@@ -22,7 +22,7 @@ int main() {
             throw __LINE__;
         }
     } catch (int e) {
-        std::cout << __FILE__ << ":" << e << std::endl;
+        std::cout << __FILE__ ":" << e << std::endl;
         return 1;
     }
 
