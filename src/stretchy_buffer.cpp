@@ -1,18 +1,22 @@
 #include <cassert>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 
-typedef size_t usize;
+typedef int32_t  i32;
+typedef uint32_t u32;
 
 template <typename T>
 struct Buffer {
-    usize cap;
-    usize len;
-    T*    items;
+    u32 cap;
+    u32 len;
+    T*  items;
 
     Buffer() : cap(0), len(0), items(nullptr) {
         std::cout << " - constructing object" << std::endl;
     }
+
+    Buffer(Buffer&& buffer) = default;
 
     ~Buffer() {
         if (items != nullptr) {
@@ -40,14 +44,31 @@ struct Buffer {
     }
 };
 
-int main() {
+static std::ostream& operator<<(std::ostream& stream, Buffer<char>& buffer) {
+    for (u32 i = 0; i < buffer.len; ++i) {
+        stream << buffer.items[i];
+    }
+    return stream;
+}
+
+static Buffer<char> f() {
     Buffer<char> buffer{};
+    return buffer;
+}
+
+i32 main() {
+    std::cout << "sizeof(Buffer<char>): " << sizeof(Buffer<char>) << std::endl;
+
+    auto buffer = f();
     buffer.push('H');
     buffer.push('i');
     buffer.push('!');
     buffer.push('\0');
-    buffer.push('\0');
-    buffer.pop();
+
     std::cout << buffer.items << std::endl;
+
+    buffer.pop();
+    std::cout << buffer << std::endl;
+
     return 0;
 }
