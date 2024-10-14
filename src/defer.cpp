@@ -1,8 +1,5 @@
-#include <cstdint>
-#include <cstdio>
 #include <functional>
-
-typedef int32_t i32;
+#include <iostream>
 
 struct Defer {
     std::function<void(void)> f;
@@ -11,25 +8,30 @@ struct Defer {
     }
 };
 
-#define IDENT_1(k) __##k##__
-#define IDENT_2(k) IDENT_1(k)
-#define IDENT_3()  IDENT_2(__COUNTER__)
+#define IDENT_0(k) __##k##__
+#define IDENT_1(k) IDENT_0(k)
+#define IDENT_2()  IDENT_1(__COUNTER__)
 
 #define defer(block)  \
-    Defer IDENT_3() { \
+    Defer IDENT_2() { \
         [&]() block   \
     }
 
-i32 main() {
+int main() {
     {
-        defer({ printf("(0) defer(...)\n"); });
+        defer({ std::cout << "(0) defer(...)" << std::endl; });
     }
+
     defer({
-        printf("(4) defer(...)\n");
-        printf("(5) defer(...)\n");
+        std::cout << "(4) defer(...)" << std::endl;
+        std::cout << "(5) defer(...)" << std::endl;
     });
-    printf("(1) ...\n");
-    defer({ printf("(3) defer(...)\n"); });
-    printf("(2) return ...;\n");
+
+    std::cout << "(1) ..." << std::endl;
+
+    defer({ std::cout << "(3) defer(...)" << std::endl; });
+
+    std::cout << "(2) return ...;" << std::endl;
+
     return 0;
 }
