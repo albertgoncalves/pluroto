@@ -22,7 +22,7 @@ export flags=(
     -ggdb
     "-march=native"
     -O1
-    "-std=c++11"
+    "-std=c++17"
     -Werror
     -Weverything
     -Wno-c++98-compat
