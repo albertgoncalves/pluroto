@@ -3,13 +3,17 @@
 
 template <typename T>
 static std::ostream& operator<<(std::ostream& stream, std::vector<T>& vec) {
-    size_t n = vec.size() - 1u;
-
-    stream << '[';
-    for (size_t i = 0; i < n; ++i) {
-        stream << vec[i] << ", ";
+    const size_t n = vec.size();
+    if (n == 0) {
+        stream << "[]";
+        return stream;
     }
-    stream << vec[n] << ']';
+
+    stream << '[' << vec[0];
+    for (size_t i = 1; i < n; ++i) {
+        stream << ", " << vec[i];
+    }
+    stream << ']';
     return stream;
 }
 
