@@ -17,6 +17,6 @@ i32 main() {
     u16* a = &array[1];
     u16* b = &array[2];
     u16* c = &array[4];
-    printf("%zu\n%zu\n%zu\n", a - array, b - array, c - array);
+    printf("%ld\n%ld\n%ld\n", a - array, b - array, c - array);
     return EXIT_SUCCESS;
 }
